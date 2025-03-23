@@ -26,6 +26,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/user/**").hasRole(USER)
                         .requestMatchers(HttpMethod.GET, "/api/coloc/**").hasRole(COLOCATAIRE)
                         .requestMatchers(HttpMethod.GET, "/api/coloc-and-user/**").hasAnyRole(COLOCATAIRE,USER)
+                        .requestMatchers(HttpMethod.GET, "/api/colocations/**").hasAnyRole(COLOCATAIRE,ADMIN)
                         .anyRequest().authenticated());
 
         http.sessionManagement(sess -> sess.sessionCreationPolicy(
