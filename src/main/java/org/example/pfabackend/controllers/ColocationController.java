@@ -1,17 +1,20 @@
-package org.example.pfabackend.controller;
+package org.example.pfabackend.controllers;
 
 import jakarta.validation.Valid;
-import org.example.pfabackend.model.ErrorDTO;
-import org.example.pfabackend.model.ColocationDTO;
-import org.example.pfabackend.service.ColocationService;
+import org.example.pfabackend.dto.ErrorDTO;
+import org.example.pfabackend.dto.ColocationDTO;
+import org.example.pfabackend.services.ColocationService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
+@Validated
 @RestController
+//@CrossOrigin(origins = "http://localhost:3000")  // Allow CORS for this controller
 @RequestMapping("/api/colocations")
 public class ColocationController {
 
@@ -20,11 +23,14 @@ public class ColocationController {
     public ColocationController(ColocationService colocationService) {
         this.colocationService = colocationService;
     }
-
     @GetMapping
-    public ResponseEntity<List<ColocationDTO>> getAllColocations() {
-        List<ColocationDTO> colocations = colocationService.getAllColocations();
-        return colocations.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(colocations);
+    public ResponseEntity<Page<ColocationDTO>> getAllColocations(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<ColocationDTO> result = colocationService.getAllColocations(search, page, size);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}")
@@ -34,7 +40,6 @@ public class ColocationController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(createErrorResponse("Colocation with ID " + id + " not found")));
     }
-
 
     @PostMapping
     public ResponseEntity<?> createColocation(@Valid @RequestBody ColocationDTO colocationDTO) {

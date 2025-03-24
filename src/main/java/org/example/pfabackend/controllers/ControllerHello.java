@@ -1,4 +1,4 @@
-package org.example.pfabackend.controller;
+package org.example.pfabackend.controllers;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
