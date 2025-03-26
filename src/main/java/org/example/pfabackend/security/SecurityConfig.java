@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/user/**").hasRole(USER)
                         .requestMatchers(HttpMethod.GET, "/api/coloc/**").hasRole(COLOCATAIRE)
                         .requestMatchers(HttpMethod.GET, "/api/coloc-and-user/**").hasAnyRole(COLOCATAIRE, USER)
-                        .requestMatchers(HttpMethod.GET, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN, USER) // GET allowed for COLOCATAIRE, ADMIN, USER
+                        .requestMatchers(HttpMethod.GET, "/api/colocations/**").permitAll() // GET allowed for COLOCATAIRE, ADMIN, USER
                         .requestMatchers(HttpMethod.POST, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN) // POST allowed for COLOCATAIRE and ADMIN
                         .requestMatchers(HttpMethod.PUT, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN) // PUT allowed for COLOCATAIRE and ADMIN
                         .requestMatchers(HttpMethod.DELETE, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN) // DELETE allowed for COLOCATAIRE and ADMIN
