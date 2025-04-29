@@ -29,10 +29,19 @@ public class SecurityConfig {
         // Enable CORS before any other configuration
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
+        // Disable CSRF protection for stateless APIs
+        http.csrf(csrf -> csrf.disable());
+
         // Grouping common access patterns to reduce redundancy
         http.authorizeHttpRequests(authz ->
                 authz
+                        // Public endpoints (no authentication required)
                         .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll() // Allow all auth-related endpoints
+                        .requestMatchers("/api/user/info").permitAll() // Allow fetching user info
+                        .requestMatchers("/api/user/update/**").hasRole(USER) // Only authenticated users can update their info
+
+                        // Role-based access control
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/user/**").hasRole(USER)
                         .requestMatchers(HttpMethod.GET, "/api/coloc/**").hasRole(COLOCATAIRE)
@@ -41,9 +50,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN) // POST allowed for COLOCATAIRE and ADMIN
                         .requestMatchers(HttpMethod.PUT, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN) // PUT allowed for COLOCATAIRE and ADMIN
                         .requestMatchers(HttpMethod.DELETE, "/api/colocations/**").hasAnyRole(COLOCATAIRE, ADMIN) // DELETE allowed for COLOCATAIRE and ADMIN
+
+                        // Default rule: All other requests require authentication
                         .anyRequest().authenticated()
         );
-
 
         // Stateless session management
         http.sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
