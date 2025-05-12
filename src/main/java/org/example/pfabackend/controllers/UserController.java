@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -185,4 +185,70 @@ public class UserController {
         // Return the response from Keycloak
         return ResponseEntity.ok(response.getBody());
     }
+    @PostMapping("/add")
+    public ResponseEntity<String> addUser(
+            @RequestBody Map<String, Object> simpleUserData,
+            @RequestHeader("Authorization") String authorizationHeader) {
+
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new IllegalArgumentException("Invalid or missing Authorization header");
+        }
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // Transformation du JSON simple vers le format attendu par Keycloak
+        Map<String, Object> keycloakUser = new HashMap<>();
+        keycloakUser.put("enabled", true);
+        keycloakUser.put("username", simpleUserData.get("username"));
+        keycloakUser.put("email", simpleUserData.get("email"));
+        keycloakUser.put("firstName", simpleUserData.get("firstName"));
+        keycloakUser.put("lastName", simpleUserData.get("lastName"));
+
+        // Création des credentials
+        Map<String, Object> credentials = new HashMap<>();
+        credentials.put("type", "password");
+        credentials.put("value", simpleUserData.get("password"));
+        credentials.put("temporary", false);
+        keycloakUser.put("credentials", Collections.singletonList(credentials));
+
+        // Création des attributs
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("locale", Collections.singletonList("en"));
+        attributes.put("gender", simpleUserData.get("gender"));
+        attributes.put("birth_date", simpleUserData.get("birthDate"));
+        attributes.put("phone_number", simpleUserData.get("phoneNumber"));
+        keycloakUser.put("attributes", attributes);
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(keycloakUser, headers);
+        String keycloakCreateUserUrl = "http://localhost:8080/admin/realms/PFARealm/users";
+
+        try {
+            ResponseEntity<Void> response = restTemplate.exchange(
+                    keycloakCreateUserUrl,
+                    HttpMethod.POST,
+                    requestEntity,
+                    Void.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.CREATED) {
+                return ResponseEntity.status(HttpStatus.CREATED).body("User successfully created.");
+            } else {
+                return ResponseEntity.status(response.getStatusCode()).body("Failed to create user.");
+            }
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST &&
+                    e.getResponseBodyAsString().contains("User exists with same email")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("User already exists with the same email.");
+            }
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(e.getResponseBodyAsString());
+        }
+    }
+
+
 }

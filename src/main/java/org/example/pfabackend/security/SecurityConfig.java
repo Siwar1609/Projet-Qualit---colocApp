@@ -38,8 +38,9 @@ public class SecurityConfig {
                         // Public endpoints (no authentication required)
                         .requestMatchers(HttpMethod.GET, "/api/hello").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // Allow all auth-related endpoints
-                        .requestMatchers("/api/user/info").permitAll() // Allow fetching user info
-                        .requestMatchers("/api/user/update/**").hasRole(USER) // Only authenticated users can update their info
+                        .requestMatchers(HttpMethod.GET,"/api/users/info").permitAll() // Allow fetching user info
+                        .requestMatchers(HttpMethod.PUT,"/api/users/**").hasAnyRole(USER,COLOCATAIRE,ADMIN) // Only authenticated users can update their info
+                        .requestMatchers(HttpMethod.POST,"/api/users/add/**").hasRole(ADMIN) // Only authenticated users can update their info
 
                         // Role-based access control
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN)

@@ -1,7 +1,9 @@
 package org.example.pfabackend.dto;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.*;
+import java.time.LocalDateTime;
+import java.util.List;
 
 public record ColocationDTO(
         Long id,
@@ -10,24 +12,65 @@ public record ColocationDTO(
         @Size(min = 3, max = 100, message = "Name must be between 3 and 100 characters")
         String name,
 
-        @NotNull(message = "ID of Publisher cannot be null")
         String idOfPublisher,
 
-        @NotNull(message = "Name of Publisher cannot be null")
         String nameOfPublisher,
 
         @NotNull(message = "Address cannot be null")
         String address,
 
-        String description, // Optional field
+        @NotNull(message = "City cannot be null")
+        String city,
+
+        @NotNull(message = "Postal Code cannot be null")
+        String postalCode,
+
+        String description,
 
         @NotNull(message = "Price cannot be null")
-        double price
+        @PositiveOrZero(message = "Price must be 0 or greater")
+        Double price,
+
+
+        @NotNull(message = "Number of rooms is required")
+        @Min(value = 1, message = "Must have at least 1 room")
+        Integer numberOfRooms,
+
+        String roommatesGenderPreference,
+
+        Boolean hasWifi,
+        Boolean hasParking,
+        Boolean hasAirConditioning,
+        Boolean isFurnished,
+        Boolean hasBalcony,
+        Boolean hasPrivateBathroom,
+
+        Integer maxRoommates,
+        Integer currentRoommates,
+
+        String status, // e.g., Available, Occupied, Pending
+
+        List<String> rules,
+        List<String> tags,
+
+        List<String> imageUrls, // Extracted image URLs
+        Double averageRating, // read-only
+
+        List<ReviewDTO> reviews, // optional for display
+
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime availableFrom,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime createdAt,
+
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime updatedAt,
+
+        Boolean isArchived,
+        Boolean isPublished
 ) {
-    // Custom constructor with validation
     public ColocationDTO {
-        // You can add additional validation logic here if needed
-        if (price < 0) {
+        if (price != null && price < 0) {
             throw new IllegalArgumentException("Price cannot be negative");
         }
     }
