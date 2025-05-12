@@ -1,5 +1,6 @@
 package org.example.pfabackend.security;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -26,7 +27,7 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
     private final JwtConverterProperties jwtProperties;
 
     @Override
-    public AbstractAuthenticationToken convert(Jwt jwt) {
+    public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
         Collection<GrantedAuthority> authorities = Stream.concat(
                 jwtGrantedAuthoritiesConverter.convert(jwt).stream(),
                 extractResourceRoles(jwt).stream()).collect(Collectors.toSet());
@@ -55,4 +56,11 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(Collectors.toSet());
     }
+
+    public boolean hasRole(Jwt jwt, String role) {
+        return jwt != null && jwt.getClaims().containsKey("resource_access")
+                && extractResourceRoles(jwt).stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_" + role));
+    }
+
 }
