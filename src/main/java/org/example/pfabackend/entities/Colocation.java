@@ -1,11 +1,13 @@
 package org.example.pfabackend.entities;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,8 +46,9 @@ public class Colocation {
     @Column(name = "price", nullable = false)
     private Double price;
 
+   // @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(name = "available_from")
-    private LocalDateTime availableFrom;
+    private LocalDate availableFrom;
 
     @Column(name = "number_of_rooms", nullable = false)
     private Integer numberOfRooms=1;
@@ -93,13 +96,15 @@ public class Colocation {
     @OneToMany(mappedBy = "colocation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ColocationImage> images = new ArrayList<>();;
 
+    //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDate createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+   // @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDate updatedAt;
     @OneToMany(mappedBy = "colocation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews;
 
@@ -112,6 +117,11 @@ public class Colocation {
 
     @Transient
     private Double averageRating; // optional transient field for displaying average
+
+    //@ElementCollection
+    //@CollectionTable(name = "colocation_images", joinColumns = @JoinColumn(name = "colocation_id"))
+    //@Column(name = "image_url")
+    //private List<String> imageUrls;
 
     @PostLoad
     public void calculateAverageRating() {

@@ -39,4 +39,22 @@ public interface ColocationRepository extends JpaRepository<Colocation, Long> {
     Page<Colocation> findByIsPublishedTrueAndIsArchivedFalse(Pageable pageable);
     Optional<Colocation> findByIdAndIsPublishedTrueAndIsArchivedFalse(Long id);
 
+    @Query("SELECT c FROM Colocation c WHERE c.isPublished = false")
+    Page<Colocation> findNonPublishedColocations(Pageable pageable);
+
+
+    @Query("SELECT c FROM Colocation c LEFT JOIN c.rules r LEFT JOIN c.tags t WHERE " +
+            "(LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.nameOfPublisher) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.city) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.postalCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.status) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(c.roommatesGenderPreference) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(r) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(t) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+            "c.isPublished = false")
+    Page<Colocation> searchNonPublished(@Param("keyword") String keyword, Pageable pageable);
+
 }
