@@ -15,7 +15,7 @@ public interface ColocationService {
     ColocationDTO saveColocation(ColocationDTO colocationDTO);
     ColocationDTO updateColocation(Long id, ColocationDTO colocationDTO);
     void deleteColocation(Long id);
-
+    Page<ColocationDTO> getNonPublishedColocations(String search,int page, int size);
     /**
      * Update the 'isPublished' status of a colocation
      */

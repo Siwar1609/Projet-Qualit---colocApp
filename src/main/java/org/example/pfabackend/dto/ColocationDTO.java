@@ -2,6 +2,8 @@ package org.example.pfabackend.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -58,13 +60,14 @@ public record ColocationDTO(
 
         List<ReviewDTO> reviews, // optional for display
 
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-        LocalDateTime availableFrom,
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-        LocalDateTime createdAt,
+        //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDate availableFrom,
 
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-        LocalDateTime updatedAt,
+        //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDate createdAt,
+
+       // @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDate updatedAt,
 
         Boolean isArchived,
         Boolean isPublished

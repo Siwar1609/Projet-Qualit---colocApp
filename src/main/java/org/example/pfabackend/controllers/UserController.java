@@ -3,6 +3,8 @@ package org.example.pfabackend.controllers;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -57,74 +59,162 @@ public class UserController {
      * Endpoint to update user details in Keycloak.
      */
     @PutMapping("/{userId}")
-    public ResponseEntity<Void> updateUser(
+    public ResponseEntity<?> updateUser(
             @PathVariable String userId,
             @RequestBody Map<String, Object> userDetails,
-            @RequestHeader("Authorization") String authorizationHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
 
-        // Extract the access token from the Authorization header
+        Map<String, Object> response = new HashMap<>();
+
+        // Vérification du token d'autorisation
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            response.put("status", "error");
+            response.put("message", "Authorization header is missing or invalid. Please provide a valid Bearer token.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
         String accessToken = authorizationHeader.replace("Bearer ", "");
 
-        // Set headers for the request
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        // Étape 1 : Vérification de l'identité de l'utilisateur
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
 
-        // Create the HTTP entity
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(userDetails, headers);
+            HttpEntity<Void> userInfoRequest = new HttpEntity<>(headers);
+            ResponseEntity<Map> userInfoResponse = restTemplate.exchange(
+                    "http://localhost:8080/realms/PFARealm/protocol/openid-connect/userinfo",
+                    HttpMethod.GET,
+                    userInfoRequest,
+                    Map.class
+            );
 
-        // Send the request to Keycloak
-        String keycloakUpdateUserUrl = "http://localhost:8080/admin/realms/PFARealm/users/" + userId;
-        restTemplate.exchange(
-                keycloakUpdateUserUrl,
-                HttpMethod.PUT,
-                requestEntity,
-                Void.class
-        );
+            String authenticatedUserId = (String) userInfoResponse.getBody().get("sub");
 
-        // Return a success response
-        return ResponseEntity.noContent().build();
+            if (!authenticatedUserId.equals(userId)) {
+                response.put("status", "error");
+                response.put("message", "Access denied. You are not authorized to update this user's profile.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+
+        } catch (HttpStatusCodeException ex) {
+            response.put("status", "error");
+            response.put("message", "Failed to validate user identity with Keycloak: " + ex.getStatusText());
+            return ResponseEntity.status(ex.getStatusCode()).body(response);
+        } catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Unexpected error during identity verification: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+
+        // Étape 2 : Mise à jour de l'utilisateur dans Keycloak
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Set<String> simpleFields = Set.of("username", "firstName", "lastName", "enabled");
+            Map<String, Object> payload = new HashMap<>();
+            Map<String, Object> attributes = new HashMap<>();
+
+            for (Map.Entry<String, Object> entry : userDetails.entrySet()) {
+                if (simpleFields.contains(entry.getKey())) {
+                    payload.put(entry.getKey(), entry.getValue());
+                } else {
+                    attributes.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            payload.put("attributes", attributes);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+
+            String keycloakUpdateUserUrl = "http://localhost:8080/admin/realms/PFARealm/users/" + userId;
+            restTemplate.exchange(keycloakUpdateUserUrl, HttpMethod.PUT, requestEntity, Void.class);
+
+            response.put("status", "success");
+            response.put("message", "User profile updated successfully.");
+            return ResponseEntity.ok(response);
+
+        } catch (HttpStatusCodeException ex) {
+            response.put("status", "error");
+            response.put("message", "Failed to update user in Keycloak: " +
+                    (ex.getResponseBodyAsString().isEmpty() ? ex.getStatusText() : ex.getResponseBodyAsString()));
+            return ResponseEntity.status(ex.getStatusCode()).body(response);
+        } catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Unexpected error while updating user: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
+
 
     /**
      * Endpoint to retrieve user details by ID from Keycloak.
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<Map<String, Object>> getUserById(
+    public ResponseEntity<?> getUserById(
             @PathVariable String userId,
-            @RequestHeader("Authorization") String authorizationHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
 
-        // Extract the access token from the Authorization header
+        Map<String, Object> response = new HashMap<>();
+
+        // Vérification du token d'autorisation
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Invalid or missing Authorization header");
+            response.put("status", HttpStatus.UNAUTHORIZED.value());
+            response.put("error", "Unauthorized");
+            response.put("message", "Authorization header is missing or invalid. Please provide a valid Bearer token.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
+
         String accessToken = authorizationHeader.replace("Bearer ", "");
 
-        // Set headers for the request
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        // Create the HTTP entity
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        // Send the request to Keycloak
         String keycloakGetUserUrl = "http://localhost:8080/admin/realms/PFARealm/users/" + userId;
-        ResponseEntity<Map> response;
+
         try {
-            response = restTemplate.exchange(
+            // Envoi de la requête à Keycloak pour récupérer les informations de l'utilisateur
+            ResponseEntity<Map> keycloakResponse = restTemplate.exchange(
                     keycloakGetUserUrl,
                     HttpMethod.GET,
                     requestEntity,
                     Map.class
             );
-        } catch (HttpClientErrorException e) {
-            // Log detailed error for debugging
-            throw new RuntimeException("Failed to fetch user details from Keycloak: " + e.getMessage(), e);
-        }
 
-        // Return the response from Keycloak
-        return ResponseEntity.ok(response.getBody());
+            // Si la réponse est réussie, renvoi des données de l'utilisateur sous forme aplatie
+            Map<String, Object> user = keycloakResponse.getBody();
+
+
+            return ResponseEntity.ok(user);
+
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            // Gestion des erreurs liées à Keycloak (Client/Server Error)
+            response.put("status", ex.getStatusCode().value());
+            response.put("error", "Keycloak Error");
+            response.put("message", ex.getResponseBodyAsString().isEmpty()
+                    ? ex.getStatusText()
+                    : ex.getResponseBodyAsString());
+            return ResponseEntity.status(ex.getStatusCode()).body(response);
+
+        } catch (HttpStatusCodeException ex) {
+            // Cas où le code d'état HTTP est spécifié mais différent des erreurs spécifiques
+            response.put("status", ex.getStatusCode().value());
+            response.put("error", ex.getStatusText());
+            response.put("message", "Error occurred while contacting Keycloak. Response: " + ex.getResponseBodyAsString());
+            return ResponseEntity.status(ex.getStatusCode()).body(response);
+
+        } catch (Exception ex) {
+            // Gestion des autres exceptions inattendues
+            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.put("error", "Unexpected error");
+            response.put("message", "An unexpected error occurred: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
+
 
     /**
      * Endpoint to retrieve all users from Keycloak with optional search parameters.

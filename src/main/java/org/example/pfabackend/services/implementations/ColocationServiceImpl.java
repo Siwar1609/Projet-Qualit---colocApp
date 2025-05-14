@@ -1,13 +1,16 @@
 package org.example.pfabackend.services.implementations;
 
+import jakarta.validation.ValidationException;
 import org.example.pfabackend.dto.ReviewDTO;
 import org.example.pfabackend.entities.Colocation;
 import org.example.pfabackend.dto.ColocationDTO;
 import org.example.pfabackend.entities.ColocationImage;
+import org.example.pfabackend.exception.ColocationException;
 import org.example.pfabackend.exceptions.ResourceNotFoundException;
 import org.example.pfabackend.repositories.ColocationRepository;
 import org.example.pfabackend.security.JwtConverter;
 import org.example.pfabackend.services.ColocationService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -60,8 +63,34 @@ public class ColocationServiceImpl implements ColocationService {
 
     @Override
     public ColocationDTO saveColocation(ColocationDTO colocationDTO) {
-        Colocation colocation = convertToEntity(colocationDTO);
-        return convertToDTO(colocationRepository.save(colocation));
+        try {
+            // Vérifier la validité du DTO
+            if (colocationDTO == null) {
+                throw new IllegalArgumentException("ColocationDTO cannot be null");
+            }
+
+            // Convertir le DTO en entité (Colocation)
+            Colocation colocation = convertToEntity(colocationDTO);
+
+            // Sauvegarder l'entité dans la base de données
+            Colocation savedColocation = colocationRepository.save(colocation);
+
+            // Convertir l'entité sauvegardée en DTO
+            return convertToDTO(savedColocation);
+
+        } catch (IllegalArgumentException ex) {
+            // Logique pour gérer les erreurs liées aux arguments invalides
+            throw new ColocationException("Invalid input data: " + ex.getMessage(), ex);
+        } catch (ValidationException ex) {
+            // Gérer les erreurs de validation
+            throw new ColocationException("Validation failed: " + ex.getMessage(), ex);
+        } catch (DataIntegrityViolationException ex) {
+            // Gérer les violations d'intégrité de la base de données (par exemple, contraintes de clé unique)
+            throw new ColocationException("Database integrity error: " + ex.getMessage(), ex);
+        } catch (Exception ex) {
+            // Gérer toutes les autres exceptions génériques
+            throw new ColocationException("An unexpected error occurred: " + ex.getMessage(), ex);
+        }
     }
 
     @Override
@@ -208,4 +237,20 @@ public class ColocationServiceImpl implements ColocationService {
         // Save and return the updated Colocation as a DTO
         return convertToDTO(colocationRepository.save(colocation));
     }
+
+    
+    public Page<ColocationDTO> getNonPublishedColocations(String search, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Colocation> colocations;
+
+        if (search == null || search.trim().isEmpty()) {
+            colocations = colocationRepository.findNonPublishedColocations(pageable);
+        } else {
+            colocations = colocationRepository.searchNonPublished(search, pageable);
+        }
+
+        return colocations.map(this::convertToDTO);
+    }
+
+
 }

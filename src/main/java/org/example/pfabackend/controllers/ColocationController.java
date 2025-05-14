@@ -1,5 +1,6 @@
 package org.example.pfabackend.controllers;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.example.pfabackend.dto.ErrorDTO;
 import org.example.pfabackend.dto.ColocationDTO;
@@ -12,7 +13,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Validated
 @RestController
@@ -100,11 +103,13 @@ public class ColocationController {
                 .body(createResponse("Colocation created successfully", created));
     }
 
-    // PUT update colocation
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> updateColocation(@PathVariable Long id, @Valid @RequestBody ColocationDTO colocationDTO,@AuthenticationPrincipal Jwt jwt) {
-        return colocationService.getColocationById(id,jwt)
+    public ResponseEntity<Map<String, Object>> updateColocation(@PathVariable Long id,
+                                                                @Valid @RequestBody ColocationDTO colocationDTO,
+                                                                @AuthenticationPrincipal Jwt jwt) {
+        return colocationService.getColocationById(id, jwt)
                 .map(existing -> {
+                    // L'ID est déjà vérifié, on met à jour la colocation
                     ColocationDTO updated = colocationService.updateColocation(id, colocationDTO);
                     return ResponseEntity.ok(createResponse("Colocation updated successfully", updated));
                 })
@@ -112,43 +117,137 @@ public class ColocationController {
                         .body(createErrorResponse("Colocation with ID " + id + " not found")));
     }
 
+
     // DELETE colocation
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteColocation(@PathVariable Long id,@AuthenticationPrincipal Jwt jwt) {
-        return colocationService.getColocationById(id,jwt)
-                .map(existing -> {
-                    colocationService.deleteColocation(id);
-                    return ResponseEntity.ok(createResponse("Colocation with ID " + id + " has been deleted successfully", null));
-                })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("Colocation with ID " + id + " not found")));
-    }
+    public ResponseEntity<Map<String, Object>> deleteColocation(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        Map<String, Object> response = new HashMap<>();
 
+        try {
+            // Recherche de la colocation à supprimer
+            Optional<ColocationDTO> existingColocation = colocationService.getColocationById(id, jwt);
+
+            if (existingColocation.isPresent()) {
+                // Supprimer la colocation si elle existe
+                colocationService.deleteColocation(id);
+
+                response.put("status", HttpStatus.OK.value());
+                response.put("message", "Colocation with ID " + id + " has been deleted successfully.");
+                return ResponseEntity.ok(response);
+            } else {
+                // Si la colocation n'existe pas
+                response.put("status", HttpStatus.NOT_FOUND.value());
+                response.put("error", "Not Found");
+                response.put("message", "Colocation with ID " + id + " not found.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+        } catch (Exception ex) {
+            // Gestion d'erreur inattendue
+            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.put("error", "Internal Server Error");
+            response.put("message", "An unexpected error occurred: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 
     /**
      * Update the isPublished status of a Colocation
      */
     @PatchMapping("/{id}/publish")
     public ResponseEntity<Map<String, Object>> updateIsPublished(
-            @PathVariable Long id, @RequestBody Map<String, Boolean> requestBody,@AuthenticationPrincipal Jwt jwt) {
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> requestBody,
+            @AuthenticationPrincipal Jwt jwt) {
 
-        boolean isPublished = requestBody.getOrDefault("isPublished", false); // Default value is false
-        ColocationDTO updatedColocation = colocationService.updateIsPublished(id, isPublished);
+        Map<String, Object> response = new HashMap<>();
 
-        return ResponseEntity.ok(createResponse("Colocation publication status updated successfully", updatedColocation));
+        try {
+            if (!requestBody.containsKey("isPublished")) {
+                response.put("status", HttpStatus.BAD_REQUEST.value());
+                response.put("error", "Bad Request");
+                response.put("message", "Missing required field 'isPublished' in request body.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+            boolean isPublished = requestBody.get("isPublished");
+
+            ColocationDTO updatedColocation = colocationService.updateIsPublished(id, isPublished);
+
+            response.put("status", HttpStatus.OK.value());
+            response.put("message", "Colocation publication status updated successfully.");
+            response.put("data", updatedColocation);
+            return ResponseEntity.ok(response);
+
+        } catch (EntityNotFoundException ex) {
+            response.put("status", HttpStatus.NOT_FOUND.value());
+            response.put("error", "Not Found");
+            response.put("message", "Colocation with id " + id + " not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+        } catch (IllegalArgumentException ex) {
+            response.put("status", HttpStatus.BAD_REQUEST.value());
+            response.put("error", "Invalid Request");
+            response.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+        } catch (Exception ex) {
+            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.put("error", "Internal Server Error");
+            response.put("message", "An unexpected error occurred: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 
-    /**
-     * Update the isArchived status of a Colocation
-     */
+
     @PatchMapping("/{id}/archive")
     public ResponseEntity<Map<String, Object>> updateIsArchived(
             @PathVariable Long id, @RequestBody Map<String, Boolean> requestBody) {
 
-        boolean isArchived = requestBody.getOrDefault("isArchived", false); // Default value is false
-        ColocationDTO updatedColocation = colocationService.updateIsArchived(id, isArchived);
+        Map<String, Object> response = new HashMap<>();
 
-        return ResponseEntity.ok(createResponse("Colocation archive status updated successfully", updatedColocation));
+        try {
+            // Vérifier si le champ "isArchived" est présent dans la requête
+            if (!requestBody.containsKey("isArchived")) {
+                response.put("status", HttpStatus.BAD_REQUEST.value());
+                response.put("error", "Bad Request");
+                response.put("message", "Missing required field 'isArchived' in request body.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+            // Extraire la valeur du champ "isArchived" ou utiliser la valeur par défaut (false)
+            boolean isArchived = requestBody.get("isArchived");
+
+            // Appel du service pour mettre à jour l'état de l'archive
+            ColocationDTO updatedColocation = colocationService.updateIsArchived(id, isArchived);
+
+            // Réponse de succès
+            response.put("status", HttpStatus.OK.value());
+            response.put("message", "Colocation archive status updated successfully.");
+            response.put("data", updatedColocation);
+            return ResponseEntity.ok(response);
+
+        } catch (EntityNotFoundException ex) {
+            // Cas où la colocation n'a pas été trouvée
+            response.put("status", HttpStatus.NOT_FOUND.value());
+            response.put("error", "Not Found");
+            response.put("message", "Colocation with id " + id + " not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+        } catch (IllegalArgumentException ex) {
+            // Cas où une erreur d'argument invalide se produit
+            response.put("status", HttpStatus.BAD_REQUEST.value());
+            response.put("error", "Invalid Request");
+            response.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+        } catch (Exception ex) {
+            // Cas où une exception non gérée se produit
+            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.put("error", "Internal Server Error");
+            response.put("message", "An unexpected error occurred: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 
     // Helper: success response
@@ -167,4 +266,22 @@ public class ColocationController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorDTO("An unexpected error occurred: " + e.getMessage()));
     }
+
+    // In ColocationController.java
+
+    // Get non-published colocations for admin
+    @GetMapping("/non-published")
+    public ResponseEntity<Page<ColocationDTO>> getNonPublishedColocations(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal Jwt jwt) {
+
+
+        // Retrieve non-published colocations
+        Page<ColocationDTO> result = colocationService.getNonPublishedColocations(search,page, size);
+        return ResponseEntity.ok(result);
+    }
+
+
 }
