@@ -1,5 +1,6 @@
 package org.example.pfabackend.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record ReviewDTO(
@@ -8,6 +9,6 @@ public record ReviewDTO(
         String reviewerName,
         int rating,
         String comment,
-        LocalDateTime createdAt
+        LocalDate createdAt
 ) {
 }
