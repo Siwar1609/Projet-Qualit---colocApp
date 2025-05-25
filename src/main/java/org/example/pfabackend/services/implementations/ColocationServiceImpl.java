@@ -287,7 +287,30 @@ public class ColocationServiceImpl implements ColocationService {
         return convertToDTO(colocationRepository.save(colocation));
     }
 
-    
+    @Override
+    public Colocation assignUserToColocation(Long colocationId, String userIdToAssign, String currentUserId, boolean isAdmin) {
+        Colocation colocation = colocationRepository.findById(colocationId)
+                .orElseThrow(() -> new RuntimeException("Colocation not found"));
+
+        // Autorisation : admin OU propriétaire
+        if (!isAdmin && !colocation.getIdOfPublisher().equals(currentUserId)) {
+            throw new SecurityException("You are not authorized to assign users to this colocation.");
+        }
+
+        // Affectation
+        colocation.assignUser(userIdToAssign);
+        return colocationRepository.save(colocation);
+    }
+
+
+    @Override
+    public Page<Colocation> getOwnColocations(String userId, String keyword, Pageable pageable) {
+        return colocationRepository.findOwnColocationsByKeyword(userId, keyword, pageable);
+    }
+
+
+
+
     public Page<ColocationDTO> getNonPublishedColocations(String search, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Colocation> colocations;

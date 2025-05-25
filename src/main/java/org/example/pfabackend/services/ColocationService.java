@@ -3,7 +3,9 @@ package org.example.pfabackend.services;
 
 import org.example.pfabackend.dto.ColocationDTO;
 import org.example.pfabackend.dto.UpdateColocationDTO;
+import org.example.pfabackend.entities.Colocation;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.util.Optional;
@@ -26,4 +28,9 @@ public interface ColocationService {
      * Update the 'isArchived' status of a colocation
      */
     ColocationDTO updateIsArchived(Long id, boolean isArchived);
+
+    public Colocation assignUserToColocation(Long colocationId, String userIdToAssign, String currentUserId, boolean isAdmin);
+
+    public Page<Colocation> getOwnColocations(String userId, String keyword, Pageable pageable);
+
 }

@@ -6,8 +6,11 @@ import org.example.pfabackend.dto.CreateColocationDTO;
 import org.example.pfabackend.dto.ErrorDTO;
 import org.example.pfabackend.dto.ColocationDTO;
 import org.example.pfabackend.dto.UpdateColocationDTO;
+import org.example.pfabackend.entities.Colocation;
 import org.example.pfabackend.services.ColocationService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,9 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Validated
 @RestController
@@ -280,6 +281,45 @@ public class ColocationController {
         Page<ColocationDTO> result = colocationService.getNonPublishedColocations(search,page, size);
         return ResponseEntity.ok(result);
     }
+
+    @PutMapping("/{id}/assign/{userIdToAssign}")
+    public ResponseEntity<?> assignUserToColocation(
+            @PathVariable Long id,
+            @PathVariable String userIdToAssign,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String currentUserId = jwt.getClaimAsString("sub");
+        List<String> roles = jwt.getClaims().containsKey("roles")
+                ? jwt.getClaimAsStringList("roles")
+                : new ArrayList<>();
+
+        boolean isAdmin = roles.contains("ADMIN");
+
+        try {
+            Colocation updated = colocationService.assignUserToColocation(id, userIdToAssign, currentUserId, isAdmin);
+            return ResponseEntity.ok(updated);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/my-colocations")
+    public ResponseEntity<Page<Colocation>> getMyColocations(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword) {
+
+        String currentUserId = jwt.getClaimAsString("sub");
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Colocation> colocations = colocationService.getOwnColocations(currentUserId, keyword, pageable);
+
+        return ResponseEntity.ok(colocations);
+    }
+
+
 
 
 }

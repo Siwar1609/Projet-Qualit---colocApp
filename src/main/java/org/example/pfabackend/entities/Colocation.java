@@ -1,6 +1,7 @@
 package org.example.pfabackend.entities;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -94,6 +95,7 @@ public class Colocation {
     private List<String> tags; // e.g., "Near university", "Quiet area"
 
     @OneToMany(mappedBy = "colocation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<ColocationImage> images = new ArrayList<>();
 
     //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -122,6 +124,25 @@ public class Colocation {
     //@CollectionTable(name = "colocation_images", joinColumns = @JoinColumn(name = "colocation_id"))
     //@Column(name = "image_url")
     //private List<String> imageUrls;
+
+    @ElementCollection
+    @CollectionTable(name = "colocation_assigned_users", joinColumns = @JoinColumn(name = "colocation_id"))
+    @Column(name = "user_id")
+    private List<String> assignedUserIds = new ArrayList<>();
+
+
+    public boolean assignUser(String userId) {
+        if (assignedUserIds.contains(userId)) {
+            throw new IllegalArgumentException("User is already assigned to this colocation.");
+        }
+        if (assignedUserIds.size() >= maxRoommates) {
+            throw new IllegalStateException("Max number of roommates reached.");
+        }
+
+        assignedUserIds.add(userId);
+        this.currentRoommates = assignedUserIds.size();
+        return true;
+    }
 
     @PostLoad
     public void calculateAverageRating() {
