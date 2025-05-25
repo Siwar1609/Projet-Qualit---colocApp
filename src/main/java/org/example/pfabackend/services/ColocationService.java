@@ -2,6 +2,7 @@ package org.example.pfabackend.services;
 
 
 import org.example.pfabackend.dto.ColocationDTO;
+import org.example.pfabackend.dto.UpdateColocationDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -13,7 +14,7 @@ public interface ColocationService {
     Page<ColocationDTO> getAllColocations(String search, int page, int size, Jwt jwt);
     Optional<ColocationDTO> getColocationById(Long id, Jwt jwt);
     ColocationDTO saveColocation(ColocationDTO colocationDTO);
-    ColocationDTO updateColocation(Long id, ColocationDTO colocationDTO);
+    ColocationDTO updateColocation(Long id, UpdateColocationDTO colocationDTO);
     void deleteColocation(Long id);
     Page<ColocationDTO> getNonPublishedColocations(String search,int page, int size);
     /**

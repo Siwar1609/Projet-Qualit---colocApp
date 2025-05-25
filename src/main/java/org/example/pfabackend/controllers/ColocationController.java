@@ -2,8 +2,10 @@ package org.example.pfabackend.controllers;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
+import org.example.pfabackend.dto.CreateColocationDTO;
 import org.example.pfabackend.dto.ErrorDTO;
 import org.example.pfabackend.dto.ColocationDTO;
+import org.example.pfabackend.dto.UpdateColocationDTO;
 import org.example.pfabackend.services.ColocationService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -53,64 +55,60 @@ public class ColocationController {
     // POST create colocation
     @PostMapping
     public ResponseEntity<Map<String, Object>> createColocation(
-            @Valid @RequestBody ColocationDTO colocationDTO,
+            @Valid @RequestBody CreateColocationDTO dto,
             @AuthenticationPrincipal Jwt jwt) {
 
-        // Injecter l'idOfPublisher depuis le token JWT
         String userId = jwt.getClaimAsString("sub");
         String nameOfPublisher = jwt.getClaimAsString("preferred_username");
 
-        // Update the DTO with the idOfPublisher and nameOfPublisher
-        ColocationDTO updatedColocationDTO = new ColocationDTO(
-                colocationDTO.id(),
-                colocationDTO.name(),
+        ColocationDTO fullDTO = new ColocationDTO(
+                null, // id sera généré
+                dto.name(),
                 userId,
                 nameOfPublisher,
-                colocationDTO.address(),
-                colocationDTO.city(),
-                colocationDTO.postalCode(),
-                colocationDTO.description(),
-                colocationDTO.price(),
-                colocationDTO.numberOfRooms(),
-                colocationDTO.roommatesGenderPreference(),
-                colocationDTO.hasWifi(),
-                colocationDTO.hasParking(),
-                colocationDTO.hasAirConditioning(),
-                colocationDTO.isFurnished(),
-                colocationDTO.hasBalcony(),
-                colocationDTO.hasPrivateBathroom(),
-                colocationDTO.maxRoommates(),
-                colocationDTO.currentRoommates(),
-                colocationDTO.status(),
-                colocationDTO.rules(),
-                colocationDTO.tags(),
-                colocationDTO.imageUrls(),
-                colocationDTO.averageRating(),
-                colocationDTO.reviews(),
-                colocationDTO.availableFrom(),
-                colocationDTO.createdAt(),
-                colocationDTO.updatedAt(),
-                colocationDTO.isArchived(),
-                colocationDTO.isPublished()
+                dto.address(),
+                dto.city(),
+                dto.postalCode(),
+                dto.description(),
+                dto.price(),
+                dto.numberOfRooms(),
+                dto.roommatesGenderPreference(),
+                dto.hasWifi(),
+                dto.hasParking(),
+                dto.hasAirConditioning(),
+                dto.isFurnished(),
+                dto.hasBalcony(),
+                dto.hasPrivateBathroom(),
+                dto.maxRoommates(),
+                dto.currentRoommates(),
+                dto.status(),
+                dto.rules(),
+                dto.tags(),
+                dto.imageUrls(),
+                dto.averageRating(),
+                null,
+                dto.availableFrom(),
+                dto.createdAt(),
+                dto.updatedAt(),
+                dto.isArchived(),
+                dto.isPublished()
         );
 
-
-        // Save the updated colocationDTO
-        ColocationDTO created = colocationService.saveColocation(updatedColocationDTO);
-
-        // Return the response
+        ColocationDTO created = colocationService.saveColocation(fullDTO);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(createResponse("Colocation created successfully", created));
     }
 
+
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> updateColocation(@PathVariable Long id,
-                                                                @Valid @RequestBody ColocationDTO colocationDTO,
-                                                                @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<Map<String, Object>> updateColocation(
+            @PathVariable Long id,
+            @RequestBody UpdateColocationDTO updateDTO,
+            @AuthenticationPrincipal Jwt jwt) {
+
         return colocationService.getColocationById(id, jwt)
                 .map(existing -> {
-                    // L'ID est déjà vérifié, on met à jour la colocation
-                    ColocationDTO updated = colocationService.updateColocation(id, colocationDTO);
+                    ColocationDTO updated = colocationService.updateColocation(id, updateDTO);
                     return ResponseEntity.ok(createResponse("Colocation updated successfully", updated));
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)

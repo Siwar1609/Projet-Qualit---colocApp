@@ -94,7 +94,7 @@ public class Colocation {
     private List<String> tags; // e.g., "Near university", "Quiet area"
 
     @OneToMany(mappedBy = "colocation", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ColocationImage> images = new ArrayList<>();;
+    private List<ColocationImage> images = new ArrayList<>();
 
     //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @CreationTimestamp
@@ -132,6 +132,23 @@ public class Colocation {
                     .orElse(0.0);
         } else {
             this.averageRating = 0.0;
+        }
+    }
+    public void addImage(ColocationImage image) {
+        images.add(image);
+        image.setColocation(this);
+    }
+
+    public void removeImage(ColocationImage image) {
+        images.remove(image);
+        image.setColocation(null);
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void validate() {
+        if (price != null && price < 0) {
+            throw new IllegalArgumentException("Price must be >= 0");
         }
     }
 

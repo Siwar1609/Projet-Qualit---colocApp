@@ -2,11 +2,14 @@ package org.example.pfabackend.services.implementations;
 
 import jakarta.validation.ValidationException;
 import org.example.pfabackend.dto.ReviewDTO;
+import org.example.pfabackend.dto.UpdateColocationDTO;
 import org.example.pfabackend.entities.Colocation;
 import org.example.pfabackend.dto.ColocationDTO;
 import org.example.pfabackend.entities.ColocationImage;
+import org.example.pfabackend.entities.Review;
 import org.example.pfabackend.exception.ColocationException;
 import org.example.pfabackend.exceptions.ResourceNotFoundException;
+import org.example.pfabackend.mappers.ReviewMapper;
 import org.example.pfabackend.repositories.ColocationRepository;
 import org.example.pfabackend.security.JwtConverter;
 import org.example.pfabackend.services.ColocationService;
@@ -53,7 +56,8 @@ public class ColocationServiceImpl implements ColocationService {
     @Override
     public Optional<ColocationDTO> getColocationById(Long id, Jwt jwt) {
         boolean isAdmin = jwt != null && jwtConverter.hasRole(jwt, ADMIN);
-
+        System.out.println("Gerrrrrr");
+        System.out.println(isAdmin);
         Optional<Colocation> colocation = isAdmin
                 ? colocationRepository.findById(id)
                 : colocationRepository.findByIdAndIsPublishedTrueAndIsArchivedFalse(id);
@@ -94,19 +98,74 @@ public class ColocationServiceImpl implements ColocationService {
     }
 
     @Override
-    public ColocationDTO updateColocation(Long id, ColocationDTO colocationDTO) {
+    public ColocationDTO updateColocation(Long id, UpdateColocationDTO dto) {
         Colocation colocation = colocationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Colocation with ID " + id + " not found"));
 
-        colocation.setName(colocationDTO.name());
-        colocation.setNameOfPublisher(colocationDTO.nameOfPublisher());
-        colocation.setIdOfPublisher(colocationDTO.idOfPublisher());
-        colocation.setDescription(colocationDTO.description());
-        colocation.setAddress(colocationDTO.address());
-        colocation.setPrice(colocationDTO.price());
+        if (dto.name() != null) colocation.setName(dto.name());
+        if (dto.description() != null) colocation.setDescription(dto.description());
+        if (dto.address() != null) colocation.setAddress(dto.address());
+        if (dto.city() != null) colocation.setCity(dto.city());
+        if (dto.postalCode() != null) colocation.setPostalCode(dto.postalCode());
+        if (dto.price() != null) colocation.setPrice(dto.price());
+        if (dto.numberOfRooms() != null) colocation.setNumberOfRooms(dto.numberOfRooms());
+        if (dto.roommatesGenderPreference() != null) colocation.setRoommatesGenderPreference(dto.roommatesGenderPreference());
+        if (dto.hasWifi() != null) colocation.setHasWifi(dto.hasWifi());
+        if (dto.hasParking() != null) colocation.setHasParking(dto.hasParking());
+        if (dto.hasAirConditioning() != null) colocation.setHasAirConditioning(dto.hasAirConditioning());
+        if (dto.isFurnished() != null) colocation.setIsFurnished(dto.isFurnished());
+        if (dto.hasBalcony() != null) colocation.setHasBalcony(dto.hasBalcony());
+        if (dto.hasPrivateBathroom() != null) colocation.setHasPrivateBathroom(dto.hasPrivateBathroom());
+        if (dto.maxRoommates() != null) colocation.setMaxRoommates(dto.maxRoommates());
+        if (dto.currentRoommates() != null) colocation.setCurrentRoommates(dto.currentRoommates());
+        if (dto.status() != null) colocation.setStatus(dto.status());
+        if (dto.rules() != null) colocation.setRules(dto.rules());
+        if (dto.tags() != null) colocation.setTags(dto.tags());
+        if (dto.imageUrls() != null) imageUpdate(dto, colocation);
+        if (dto.averageRating() != null) colocation.setAverageRating(dto.averageRating());
+        if (dto.reviews() != null)
+            colocation.setReviews(dto.reviews().stream().map(ReviewMapper::toEntity).toList());
+        if (dto.availableFrom() != null) colocation.setAvailableFrom(dto.availableFrom());
+        if (dto.updatedAt() != null) colocation.setUpdatedAt(dto.updatedAt());
+        if (dto.isArchived() != null) colocation.setIsArchived(dto.isArchived());
+        if (dto.isPublished() != null) colocation.setIsPublished(dto.isPublished());
 
         return convertToDTO(colocationRepository.save(colocation));
     }
+    public static void imageUpdate(UpdateColocationDTO colocationDTO, Colocation colocation) {
+        if (colocationDTO.imageUrls() != null) {
+            List<ColocationImage> images = colocationDTO.imageUrls().stream()
+                    .map(url -> {
+                        ColocationImage img = new ColocationImage();
+                        img.setUrl(url);
+                        img.setColocation(colocation); // lien bidirectionnel
+                        return img;
+                    })
+                    .toList();
+            colocation.setImages(images);
+        }
+    }
+    public static void imageUpdate(ColocationDTO colocationDTO, Colocation colocation) {
+        if (colocationDTO.imageUrls() != null) {
+            List<ColocationImage> images = colocationDTO.imageUrls().stream()
+                    .map(url -> {
+                        ColocationImage img = new ColocationImage();
+                        img.setUrl(url);
+                        img.setColocation(colocation);
+                        return img;
+                    })
+                    .toList();
+            colocation.setImages(images);
+        }
+    }
+
+
+
+
+    public static Review toEntity(ReviewDTO dto) {
+        return ReviewMapper.toEntity(dto);
+    }
+
 
     @Override
     public void deleteColocation(Long id) {
@@ -195,17 +254,7 @@ public class ColocationServiceImpl implements ColocationService {
         colocation.setTags(dto.tags());
 
         // Convert imageUrls (DTO) to List<ColocationImage> (Entity)
-        if (dto.imageUrls() != null) {
-            List<ColocationImage> imageEntities = dto.imageUrls().stream()
-                    .map(url -> {
-                        ColocationImage image = new ColocationImage();
-                        image.setUrl(url);
-                        image.setColocation(colocation); // important to set the owning side
-                        return image;
-                    })
-                    .toList();
-            colocation.setImages(imageEntities);
-        }
+        imageUpdate(dto, colocation);
 
         // averageRating and reviews are managed separately (read-only or related entity)
         return colocation;
