@@ -324,5 +324,9 @@ public class ColocationServiceImpl implements ColocationService {
         return colocations.map(this::convertToDTO);
     }
 
+    @Override
+    public Optional<Colocation> getColocationEntityById(Long id) {
+        return colocationRepository.findById(id);
+    }
 
 }

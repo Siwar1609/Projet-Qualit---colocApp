@@ -33,4 +33,6 @@ public interface ColocationService {
 
     public Page<Colocation> getOwnColocations(String userId, String keyword, Pageable pageable);
 
+    Optional<Colocation> getColocationEntityById(Long id);
+
 }
