@@ -1,10 +1,7 @@
 package org.example.pfabackend.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public record ColocationDTO(
@@ -14,11 +11,14 @@ public record ColocationDTO(
         @Size(min = 3, max = 100, message = "Name must be between 3 and 100 characters")
         String name,
 
+        @NotBlank(message = "Publisher ID cannot be blank")
         String idOfPublisher,
 
+        @NotBlank(message = "Publisher name cannot be blank")
         String nameOfPublisher,
 
         @NotNull(message = "Address cannot be null")
+        @Size(min = 3, message = "Address must be at least 3 characters")
         String address,
 
         @NotNull(message = "City cannot be null")
@@ -33,8 +33,6 @@ public record ColocationDTO(
         @PositiveOrZero(message = "Price must be 0 or greater")
         Double price,
 
-
-        @NotNull(message = "Number of rooms is required")
         @Min(value = 1, message = "Must have at least 1 room")
         Integer numberOfRooms,
 
@@ -50,23 +48,21 @@ public record ColocationDTO(
         Integer maxRoommates,
         Integer currentRoommates,
 
-        String status, // e.g., Available, Occupied, Pending
+        String status,
 
         List<String> rules,
         List<String> tags,
 
-        List<String> imageUrls, // Extracted image URLs
-        Double averageRating, // read-only
+        List<String> imageUrls,
 
-        List<ReviewDTO> reviews, // optional for display
+        Double averageRating, // calculé à partir des reviews
 
-        //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        List<ReviewDTO> reviews,
+
         LocalDate availableFrom,
 
-        //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDate createdAt,
 
-       // @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDate updatedAt,
 
         Boolean isArchived,
@@ -75,6 +71,10 @@ public record ColocationDTO(
     public ColocationDTO {
         if (price != null && price < 0) {
             throw new IllegalArgumentException("Price cannot be negative");
+        }
+
+        if (numberOfRooms != null && numberOfRooms < 1) {
+            throw new IllegalArgumentException("Must have at least 1 room");
         }
     }
 }

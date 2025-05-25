@@ -1,6 +1,7 @@
 package org.example.pfabackend.entities;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -94,7 +95,8 @@ public class Colocation {
     private List<String> tags; // e.g., "Near university", "Quiet area"
 
     @OneToMany(mappedBy = "colocation", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ColocationImage> images = new ArrayList<>();;
+    @JsonManagedReference
+    private List<ColocationImage> images = new ArrayList<>();
 
     //@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @CreationTimestamp
@@ -123,6 +125,25 @@ public class Colocation {
     //@Column(name = "image_url")
     //private List<String> imageUrls;
 
+    @ElementCollection
+    @CollectionTable(name = "colocation_assigned_users", joinColumns = @JoinColumn(name = "colocation_id"))
+    @Column(name = "user_id")
+    private List<String> assignedUserIds = new ArrayList<>();
+
+
+    public boolean assignUser(String userId) {
+        if (assignedUserIds.contains(userId)) {
+            throw new IllegalArgumentException("User is already assigned to this colocation.");
+        }
+        if (assignedUserIds.size() >= maxRoommates) {
+            throw new IllegalStateException("Max number of roommates reached.");
+        }
+
+        assignedUserIds.add(userId);
+        this.currentRoommates = assignedUserIds.size();
+        return true;
+    }
+
     @PostLoad
     public void calculateAverageRating() {
         if (reviews != null && !reviews.isEmpty()) {
@@ -132,6 +153,23 @@ public class Colocation {
                     .orElse(0.0);
         } else {
             this.averageRating = 0.0;
+        }
+    }
+    public void addImage(ColocationImage image) {
+        images.add(image);
+        image.setColocation(this);
+    }
+
+    public void removeImage(ColocationImage image) {
+        images.remove(image);
+        image.setColocation(null);
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void validate() {
+        if (price != null && price < 0) {
+            throw new IllegalArgumentException("Price must be >= 0");
         }
     }
 
