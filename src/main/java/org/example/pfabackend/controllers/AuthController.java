@@ -22,7 +22,7 @@ public class AuthController {
     private static final String CLIENT_ID = "71919931-d9ee-4522-b316-f8152da7785b";
     private static final String REALM = "PFARealm";
     // Map role name → full role JSON payload for Keycloak API
-    private static final Map<String, Map<String, Object>> ROLE_MAP = Map.of(
+    static final Map<String, Map<String, Object>> ROLE_MAP = Map.of(
             "admin", Map.of(
                     "id", "c7623844-272a-4f27-b450-3ce013c1e7b2",
                     "name", "admin",
