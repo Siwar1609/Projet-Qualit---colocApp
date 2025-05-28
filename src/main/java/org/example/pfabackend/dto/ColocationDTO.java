@@ -77,4 +77,7 @@ public record ColocationDTO(
             throw new IllegalArgumentException("Must have at least 1 room");
         }
     }
+    public String getIdOfPublisher() {
+        return idOfPublisher != null ? idOfPublisher : "";
+    }
 }

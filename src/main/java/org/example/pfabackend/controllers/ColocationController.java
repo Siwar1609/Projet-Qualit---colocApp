@@ -26,9 +26,11 @@ import java.util.*;
 public class ColocationController {
 
     private final ColocationService colocationService;
+    private final KeycloakRoleService keycloakRoleService;
 
-    public ColocationController(ColocationService colocationService) {
+    public ColocationController(ColocationService colocationService, KeycloakRoleService keycloakRoleService) {
         this.colocationService = colocationService;
+        this.keycloakRoleService = keycloakRoleService;
     }
 
     // GET paginated + searchable colocations
@@ -163,15 +165,25 @@ public class ColocationController {
 
         try {
             if (!requestBody.containsKey("isPublished")) {
-                response.put("status", HttpStatus.BAD_REQUEST.value());
-                response.put("error", "Bad Request");
-                response.put("message", "Missing required field 'isPublished' in request body.");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                return buildErrorResponse(HttpStatus.BAD_REQUEST, "Missing required field 'isPublished' in request body.");
             }
 
             boolean isPublished = requestBody.get("isPublished");
 
+            // Met à jour la colocation
             ColocationDTO updatedColocation = colocationService.updateIsPublished(id, isPublished);
+
+            // Si publié, assigner le rôle "colocataire"
+            if (isPublished) {
+                String userId = updatedColocation.getIdOfPublisher(); // doit être l'UUID Keycloak du user
+                String token = "Bearer " + jwt.getTokenValue();
+
+                boolean assigned = keycloakRoleService.assignRoleToUser(userId, "colocataire", token);
+
+                if (!assigned) {
+                    return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to assign 'colocataire' role.");
+                }
+            }
 
             response.put("status", HttpStatus.OK.value());
             response.put("message", "Colocation publication status updated successfully.");
@@ -179,23 +191,20 @@ public class ColocationController {
             return ResponseEntity.ok(response);
 
         } catch (EntityNotFoundException ex) {
-            response.put("status", HttpStatus.NOT_FOUND.value());
-            response.put("error", "Not Found");
-            response.put("message", "Colocation with id " + id + " not found.");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-
+            return buildErrorResponse(HttpStatus.NOT_FOUND, "Colocation with id " + id + " not found.");
         } catch (IllegalArgumentException ex) {
-            response.put("status", HttpStatus.BAD_REQUEST.value());
-            response.put("error", "Invalid Request");
-            response.put("message", ex.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
         } catch (Exception ex) {
-            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-            response.put("error", "Internal Server Error");
-            response.put("message", "An unexpected error occurred: " + ex.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error: " + ex.getMessage());
         }
+    }
+
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(HttpStatus status, String message) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", status.getReasonPhrase());
+        errorResponse.put("message", message);
+        return ResponseEntity.status(status).body(errorResponse);
     }
 
 
