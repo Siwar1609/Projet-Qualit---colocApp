@@ -3,10 +3,7 @@ package org.example.pfabackend.controllers;
 import lombok.RequiredArgsConstructor;
 import org.example.pfabackend.entities.ChatMessageEntity;
 import org.example.pfabackend.repositories.ChatMessageRepository;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,5 +18,18 @@ public class ChatRestController {
     @GetMapping("/messages")
     public List<ChatMessageEntity> getAllMessages() {
         return chatMessageRepository.findAll();
+    }
+    @GetMapping("/messages/private")
+    public List<ChatMessageEntity> getPrivateMessages(
+            @RequestParam String user1,
+            @RequestParam String user2) {
+        return chatMessageRepository.findBySenderAndReceiverIn(user1, user2);
+    }
+
+    @GetMapping("/users")
+    public List<String> getAllUsers() {
+        List<String> users = chatMessageRepository.findDistinctUsers();
+        System.out.println("Fetched users: " + users);
+        return users;
     }
 }

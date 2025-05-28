@@ -31,8 +31,11 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                 token = token.substring(7);
                 Jwt jwt = jwtDecoder.decode(token);
 
+                // Make sure this is unique and consistent!
+                String username = jwt.getSubject();
+
                 Authentication auth = new UsernamePasswordAuthenticationToken(
-                        jwt.getSubject(), null, Collections.emptyList());
+                        username, null, Collections.emptyList());
                 accessor.setUser(auth);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
