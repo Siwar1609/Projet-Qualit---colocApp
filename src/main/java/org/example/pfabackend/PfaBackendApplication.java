@@ -7,7 +7,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-@ComponentScan(basePackages = "org.example.pfabackend")
 public class PfaBackendApplication {
 
     public static void main(String[] args) {
