@@ -30,7 +30,7 @@ public class ExpenseReminderService {
 
         for (Expense expense : allExpenses) {
             if (expense.getDateLimit() != null &&
-                    expense.getDateLimit().minusDays(7).equals(today)) {
+                    !expense.getDateLimit().minusDays(7).isAfter(today)) {
 
                 for (ExpenseShare share : expense.getShares()) {
                     if (share.getUserId() != null &&
@@ -60,14 +60,14 @@ public class ExpenseReminderService {
 
             String subject = "🔔 Reminder: You have unpaid expenses due soon";
             String body = "Hello,\n\n"
-                    + "You have expenses due in 7 days totaling **$" + totalUnpaid + "**.\n"
+                    + "You have expenses due in 7 days or less totaling **$" + totalUnpaid + "**.\n"
                     + "Pending bills: " + String.join(", ", bills) + ".\n\n"
                     + "Please make your payments soon.\n\n"
                     + "Thank you.";
 
             try {
                 notificationService.sendEmail(userEmail, subject, body);
-                notificationService.sendPushNotification(userId, "💰 Expenses due in 7 days: $" + totalUnpaid);
+                notificationService.sendPushNotification(userId, "💰 Expenses due soon: $" + totalUnpaid);
 
                 log.info("🔔 Reminder sent to {} ({}) - ${} unpaid", userId, userEmail, totalUnpaid);
             } catch (Exception e) {
