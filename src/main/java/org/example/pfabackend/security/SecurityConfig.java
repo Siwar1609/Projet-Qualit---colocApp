@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,"/api/users/add/**").hasRole(ADMIN) // Only authenticated users can update their info
                         .requestMatchers("/ws/**").permitAll() // handshake websocket non protégé
                         .requestMatchers("/api/chat/**").hasAnyRole(USER,COLOCATAIRE,ADMIN)
+                        .requestMatchers("/api/expenses/**").hasAnyRole(USER,COLOCATAIRE,ADMIN)
+                        .requestMatchers("/api/notify/**").permitAll() // Allow fetching user info
 
                         // Role-based access control
                         .requestMatchers(HttpMethod.GET, "/api/admin/**").hasRole(ADMIN)

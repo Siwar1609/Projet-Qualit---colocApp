@@ -1,6 +1,7 @@
 package org.example.pfabackend.dto;
 
 import lombok.*;
+import org.example.pfabackend.enums.MessageType;
 
 import java.util.Date;
 @Getter
@@ -13,5 +14,5 @@ public class ChatMessage {
     private String sender;
     private String receiver;
     private Date date;
-    private  MessageType type;
+    private MessageType type;
 }

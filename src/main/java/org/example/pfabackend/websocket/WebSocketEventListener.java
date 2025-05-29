@@ -3,7 +3,7 @@ package org.example.pfabackend.websocket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.pfabackend.dto.ChatMessage;
-import org.example.pfabackend.dto.MessageType;
+import org.example.pfabackend.enums.MessageType;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;

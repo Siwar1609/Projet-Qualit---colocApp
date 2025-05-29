@@ -2,7 +2,7 @@ package org.example.pfabackend.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.example.pfabackend.dto.MessageType;
+import org.example.pfabackend.enums.MessageType;
 
 import java.util.Date;
 

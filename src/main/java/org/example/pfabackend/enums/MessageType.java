@@ -1,4 +1,4 @@
-package org.example.pfabackend.dto;
+package org.example.pfabackend.enums;
 
 public enum MessageType {
     CHAT,

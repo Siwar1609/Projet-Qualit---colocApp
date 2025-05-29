@@ -2,12 +2,11 @@ package org.example.pfabackend.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.example.pfabackend.dto.ChatMessage;
-import org.example.pfabackend.dto.MessageType;
+import org.example.pfabackend.enums.MessageType;
 import org.example.pfabackend.entities.ChatMessageEntity;
 import org.example.pfabackend.repositories.ChatMessageRepository;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
