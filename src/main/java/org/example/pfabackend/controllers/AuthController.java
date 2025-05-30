@@ -176,4 +176,35 @@ public class AuthController {
                     .body(Map.of("error", "Failed to assign roles", "details", e.getMessage()));
         }
     }
+
+    @GetMapping("/users/{userId}/roles")
+    public ResponseEntity<?> getUserRoles(
+            @PathVariable String userId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+
+        String url = String.format(
+                "http://localhost:8080/admin/realms/PFARealm/users/%s/role-mappings/clients/%s",
+                userId, CLIENT_ID);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", authorizationHeader);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<List> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    List.class
+            );
+
+            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch roles", "details", e.getMessage()));
+        }
+    }
+
 }
