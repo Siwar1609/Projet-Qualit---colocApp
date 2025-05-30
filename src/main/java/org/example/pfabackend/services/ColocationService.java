@@ -2,11 +2,13 @@ package org.example.pfabackend.services;
 
 
 import org.example.pfabackend.dto.ColocationDTO;
+import org.example.pfabackend.dto.CreateColocationDTO;
 import org.example.pfabackend.dto.UpdateColocationDTO;
 import org.example.pfabackend.entities.Colocation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,4 +46,14 @@ public interface ColocationService {
     Page<ColocationDTO> getAssignedColocations(String userId, int page, int size);
 
     Colocation toggleUserAssignment(Long id, String userIdToAssign, String currentUserId, boolean isAdmin);
+
+    ColocationDTO saveColocationWithImages(CreateColocationDTO dto, List<MultipartFile> images, String publisherId, String publisherUsername);
+
+    // Nouvelles méthodes
+    ColocationDTO updateImages(Long colocationId, List<MultipartFile> newImages);
+
+
+    void deleteImageByUrl(Long colocationId, String imageUrl) ;
+
+    boolean isOwner(Long colocationId, String userId);
 }

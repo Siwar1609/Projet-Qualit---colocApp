@@ -12,11 +12,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -383,6 +386,65 @@ public class ColocationController {
             return ResponseEntity.ok(colocations);
         }
     }
+
+    @PostMapping(
+            value = "/with-images",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<ColocationDTO> createColocation(
+            @AuthenticationPrincipal Jwt jwt,
+            @ModelAttribute CreateColocationDTO dto,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
+    ) {
+        String publisherId = jwt.getClaimAsString("sub");
+        String publisherUsername = jwt.getClaimAsString("preferred_username"); // ou "username"
+
+        ColocationDTO created = colocationService.saveColocationWithImages(dto, images, publisherId, publisherUsername);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+
+    @PutMapping("/{id}/images")
+    public ResponseEntity<ColocationDTO> addImagesToColocation(
+            @PathVariable Long id,
+            @RequestParam("images") List<MultipartFile> images,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        // Tu peux aussi vérifier si le user est bien propriétaire ici
+        ColocationDTO updated = colocationService.updateImages(id, images);
+        return ResponseEntity.ok(updated);
+    }
+
+
+    @DeleteMapping("/{colocationId}/images")
+    public ResponseEntity<Void> deleteImageByUrl(
+            @PathVariable Long colocationId,
+            @RequestParam String imageUrl,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        // Récupération de l'ID utilisateur depuis le token (à adapter selon ton JWT)
+        String userId = jwt.getClaimAsString("sub"); // ou autre clé selon ton JWT
+
+        // Récupération des rôles
+        List<String> roles = jwt.getClaimAsStringList("roles");
+
+        // Vérifier si l'utilisateur est admin
+        boolean isAdmin = roles != null && roles.contains("ADMIN");
+
+        // Vérifie si l'utilisateur est propriétaire
+        boolean isOwner = colocationService.isOwner(colocationId, userId);
+
+        if (!isAdmin && !isOwner) {
+            throw new AccessDeniedException("You are not authorized to delete this image.");
+        }
+
+        colocationService.deleteImageByUrl(colocationId, imageUrl);
+        return ResponseEntity.noContent().build();
+    }
+
+
+
 
 
 }

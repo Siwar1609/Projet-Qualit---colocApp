@@ -1,6 +1,7 @@
 package org.example.pfabackend.services.implementations;
 
 import jakarta.validation.ValidationException;
+import org.example.pfabackend.dto.CreateColocationDTO;
 import org.example.pfabackend.dto.ReviewDTO;
 import org.example.pfabackend.dto.UpdateColocationDTO;
 import org.example.pfabackend.entities.Colocation;
@@ -17,9 +18,16 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.example.pfabackend.security.SecurityConfig.ADMIN;
@@ -226,6 +234,52 @@ public class ColocationServiceImpl implements ColocationService {
         );
     }
 
+    public Colocation convertToEntity(CreateColocationDTO dto) {
+        Colocation colocation = new Colocation();
+
+        colocation.setName(dto.name());
+        colocation.setAddress(dto.address());
+        colocation.setCity(dto.city());
+        colocation.setPostalCode(dto.postalCode());
+        colocation.setDescription(dto.description());
+        colocation.setPrice(dto.price());
+        colocation.setNumberOfRooms(dto.numberOfRooms());
+        colocation.setRoommatesGenderPreference(dto.roommatesGenderPreference());
+        colocation.setHasWifi(dto.hasWifi());
+        colocation.setHasParking(dto.hasParking());
+        colocation.setHasAirConditioning(dto.hasAirConditioning());
+        colocation.setIsFurnished(dto.isFurnished());
+        colocation.setHasBalcony(dto.hasBalcony());
+        colocation.setHasPrivateBathroom(dto.hasPrivateBathroom());
+        colocation.setMaxRoommates(dto.maxRoommates());
+        colocation.setCurrentRoommates(dto.currentRoommates());
+        colocation.setStatus(dto.status());
+        colocation.setRules(dto.rules());
+        colocation.setTags(dto.tags());
+        colocation.setAvailableFrom(dto.availableFrom());
+        colocation.setCreatedAt(dto.createdAt());
+        colocation.setUpdatedAt(dto.updatedAt());
+        colocation.setIsArchived(dto.isArchived() != null ? dto.isArchived() : false);
+        colocation.setIsPublished(dto.isPublished() != null ? dto.isPublished() : false);
+        colocation.setAssignedUserIds(dto.assignedUserIds());
+
+        // Les images et reviews doivent être gérées séparément
+        // Exemple pour les images si tu veux les mapper :
+    /*
+    List<ColocationImage> imageEntities = dto.imageUrls().stream()
+        .map(url -> {
+            ColocationImage image = new ColocationImage();
+            image.setUrl(url);
+            image.setColocation(colocation); // nécessaire si tu veux les lier bidirectionnellement
+            return image;
+        })
+        .collect(Collectors.toList());
+    colocation.setImages(imageEntities);
+    */
+
+        return colocation;
+    }
+
 
 
     // Convert ColocationDTO to Colocation Entity
@@ -378,5 +432,83 @@ public class ColocationServiceImpl implements ColocationService {
         return colocationRepository.save(colocation);
     }
 
+    @Override
+    public ColocationDTO saveColocationWithImages(CreateColocationDTO dto, List<MultipartFile> images, String publisherId, String publisherUsername) {
+        Colocation colocation = convertToEntity(dto);
+        colocation.setIdOfPublisher(publisherId);
+        colocation.setNameOfPublisher(publisherUsername); // Ajoute ce setter si nécessaire
+
+        if (images != null && !images.isEmpty()) {
+            for (MultipartFile image : images) {
+                String fileName = saveImageToLocal(image);
+                ColocationImage colocationImage = new ColocationImage();
+                colocationImage.setUrl("/uploads/images/colocations/" + fileName);
+                colocation.addImage(colocationImage);
+            }
+        }
+
+        Colocation saved = colocationRepository.save(colocation);
+        return convertToDTO(saved);
+    }
+
+
+    private String saveImageToLocal(MultipartFile image) {
+        try {
+            String uploadDir = "uploads/images/colocations";
+            Files.createDirectories(Paths.get(uploadDir));
+
+            String originalFilename = image.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalFilename;
+            Path filePath = Paths.get(uploadDir, fileName);
+            Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return fileName;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store file: " + e.getMessage(), e);
+        }
+    }
+
+
+    @Override
+    public ColocationDTO updateImages(Long colocationId, List<MultipartFile> newImages) {
+        Colocation colocation = colocationRepository.findById(colocationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Colocation not found"));
+
+        if (newImages != null && !newImages.isEmpty()) {
+            for (MultipartFile image : newImages) {
+                String fileName = saveImageToLocal(image);
+                ColocationImage imageEntity = new ColocationImage();
+                imageEntity.setUrl("/uploads/images/colocations/" + fileName);
+                imageEntity.setColocation(colocation);
+                colocation.addImage(imageEntity);
+            }
+        }
+
+        Colocation updated = colocationRepository.save(colocation);
+        return convertToDTO(updated);
+    }
+
+
+
+    @Override
+    public void deleteImageByUrl(Long colocationId, String imageUrl) {
+        Colocation colocation = colocationRepository.findById(colocationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Colocation not found"));
+
+        ColocationImage imageToDelete = colocation.getImages().stream()
+                .filter(img -> imageUrl.equals(img.getUrl()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Image with URL not found in this colocation"));
+
+        colocation.getImages().remove(imageToDelete);
+        colocationRepository.save(colocation);
+    }
+
+    public boolean isOwner(Long colocationId, String userId) {
+        Colocation colocation = colocationRepository.findById(colocationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Colocation not found"));
+
+        return colocation.getIdOfPublisher().equals(userId);
+    }
 
 }
