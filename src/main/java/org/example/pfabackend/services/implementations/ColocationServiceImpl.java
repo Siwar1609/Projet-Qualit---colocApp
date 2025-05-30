@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.example.pfabackend.security.SecurityConfig.ADMIN;
 
@@ -329,4 +330,18 @@ public class ColocationServiceImpl implements ColocationService {
         return colocationRepository.findById(id);
     }
 
+    @Override
+    public List<Long> getAssignedColocationIds(String userId) {
+        return colocationRepository.findByAssignedUserIdsContaining(userId)
+                .stream()
+                .map(Colocation::getId)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<ColocationDTO> getAssignedColocations(String userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return colocationRepository.findByAssignedUserIdsContaining(userId, pageable)
+                .map(this::convertToDTO);
+    }
 }

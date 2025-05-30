@@ -329,6 +329,24 @@ public class ColocationController {
     }
 
 
+    // Add this method to your controller
+    @GetMapping("/assigned")
+    public ResponseEntity<?> getAssignedColocations(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "false") boolean minimal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        String userId = jwt.getClaimAsString("sub");
+
+        if (minimal) {
+            List<Long> colocationIds = colocationService.getAssignedColocationIds(userId);
+            return ResponseEntity.ok(colocationIds);
+        } else {
+            Page<ColocationDTO> colocations = colocationService.getAssignedColocations(userId, page, size);
+            return ResponseEntity.ok(colocations);
+        }
+    }
 
 
 }

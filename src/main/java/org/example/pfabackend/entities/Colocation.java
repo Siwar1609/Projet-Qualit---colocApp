@@ -107,6 +107,7 @@ public class Colocation {
     @Column(name = "updated_at", nullable = false)
    // @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDate updatedAt;
+
     @OneToMany(mappedBy = "colocation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews;
 

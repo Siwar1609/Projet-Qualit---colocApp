@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import java.util.List;
 import java.util.Optional;
 
 
@@ -35,4 +36,7 @@ public interface ColocationService {
 
     Optional<Colocation> getColocationEntityById(Long id);
 
+    List<Long> getAssignedColocationIds(String userId);
+
+    Page<ColocationDTO> getAssignedColocations(String userId, int page, int size);
 }

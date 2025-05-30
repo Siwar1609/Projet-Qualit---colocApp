@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ColocationRepository extends JpaRepository<Colocation, Long> {
@@ -74,4 +75,7 @@ public interface ColocationRepository extends JpaRepository<Colocation, Long> {
             @Param("keyword") String keyword,
             Pageable pageable);
 
+    // Add these methods to your repository interface
+    List<Colocation> findByAssignedUserIdsContaining(String userId);
+    Page<Colocation> findByAssignedUserIdsContaining(String userId, Pageable pageable);
 }
