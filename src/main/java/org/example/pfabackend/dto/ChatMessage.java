@@ -4,6 +4,7 @@ import lombok.*;
 import org.example.pfabackend.enums.MessageType;
 
 import java.util.Date;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -15,4 +16,5 @@ public class ChatMessage {
     private String receiver;
     private Date date;
     private MessageType type;
+    private Long idColoc;
 }

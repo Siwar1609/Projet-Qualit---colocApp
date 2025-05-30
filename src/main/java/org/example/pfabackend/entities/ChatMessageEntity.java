@@ -30,4 +30,8 @@ public class ChatMessageEntity {
 
     @Enumerated(EnumType.STRING)
     private MessageType type;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_coloc", nullable = true)
+    private Colocation colocation;
 }
