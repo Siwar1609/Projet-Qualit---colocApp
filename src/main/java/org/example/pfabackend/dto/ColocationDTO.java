@@ -66,7 +66,8 @@ public record ColocationDTO(
         LocalDate updatedAt,
 
         Boolean isArchived,
-        Boolean isPublished
+        Boolean isPublished,
+        List<String> assignedUserIds
 ) {
     public ColocationDTO {
         if (price != null && price < 0) {

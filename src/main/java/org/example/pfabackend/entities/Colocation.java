@@ -174,4 +174,15 @@ public class Colocation {
         }
     }
 
+    public boolean removeAssignedUser(String userId) {
+        if (!assignedUserIds.contains(userId)) {
+            throw new IllegalArgumentException("User is not assigned to this colocation.");
+        }
+
+        assignedUserIds.remove(userId);
+        this.currentRoommates = assignedUserIds.size();
+        return true;
+    }
+
+
 }

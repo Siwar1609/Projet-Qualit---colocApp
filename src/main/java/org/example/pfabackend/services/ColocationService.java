@@ -38,5 +38,10 @@ public interface ColocationService {
 
     List<Long> getAssignedColocationIds(String userId);
 
+
+    Colocation removeAssignedUserFromColocation(Long colocationId, String userIdToRemove, String currentUserId, boolean isAdmin);
+
     Page<ColocationDTO> getAssignedColocations(String userId, int page, int size);
+
+    Colocation toggleUserAssignment(Long id, String userIdToAssign, String currentUserId, boolean isAdmin);
 }

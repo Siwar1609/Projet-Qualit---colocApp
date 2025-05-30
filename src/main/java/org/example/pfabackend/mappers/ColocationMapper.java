@@ -95,7 +95,8 @@ public class ColocationMapper {
                 colocation.getCreatedAt(),
                 colocation.getUpdatedAt(),
                 colocation.getIsArchived(),
-                colocation.getIsPublished()
+                colocation.getIsPublished(),
+                colocation.getAssignedUserIds()
         );
     }
 }

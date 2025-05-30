@@ -94,7 +94,8 @@ public class ColocationController {
                 dto.createdAt(),
                 dto.updatedAt(),
                 dto.isArchived(),
-                dto.isPublished()
+                dto.isPublished(),
+                dto.assignedUserIds()
         );
 
         ColocationDTO created = colocationService.saveColocation(fullDTO);
@@ -290,7 +291,7 @@ public class ColocationController {
         Page<ColocationDTO> result = colocationService.getNonPublishedColocations(search,page, size);
         return ResponseEntity.ok(result);
     }
-
+/*
     @PutMapping("/{id}/assign/{userIdToAssign}")
     public ResponseEntity<?> assignUserToColocation(
             @PathVariable Long id,
@@ -306,6 +307,30 @@ public class ColocationController {
 
         try {
             Colocation updated = colocationService.assignUserToColocation(id, userIdToAssign, currentUserId, isAdmin);
+            return ResponseEntity.ok(updated);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+*/
+
+    @PutMapping("/{id}/assign/{userIdToAssign}")
+    public ResponseEntity<?> assignOrUnassignUserToColocation(
+            @PathVariable Long id,
+            @PathVariable String userIdToAssign,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String currentUserId = jwt.getClaimAsString("sub");
+        List<String> roles = jwt.getClaims().containsKey("roles")
+                ? jwt.getClaimAsStringList("roles")
+                : new ArrayList<>();
+
+        boolean isAdmin = roles.contains("ADMIN");
+
+        try {
+            Colocation updated = colocationService.toggleUserAssignment(id, userIdToAssign, currentUserId, isAdmin);
             return ResponseEntity.ok(updated);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));

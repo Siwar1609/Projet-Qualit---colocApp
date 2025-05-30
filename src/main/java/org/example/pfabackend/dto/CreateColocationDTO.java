@@ -33,5 +33,6 @@ public record CreateColocationDTO(
         LocalDate createdAt,
         LocalDate updatedAt,
         Boolean isArchived,
-        Boolean isPublished
+        Boolean isPublished,
+        List<String> assignedUserIds
 ) {}

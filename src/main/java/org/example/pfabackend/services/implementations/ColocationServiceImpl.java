@@ -221,7 +221,8 @@ public class ColocationServiceImpl implements ColocationService {
                 colocation.getCreatedAt(),
                 colocation.getUpdatedAt(),
                 colocation.getIsArchived(),
-                colocation.getIsPublished()
+                colocation.getIsPublished(),
+                colocation.getAssignedUserIds()
         );
     }
 
@@ -303,6 +304,20 @@ public class ColocationServiceImpl implements ColocationService {
         return colocationRepository.save(colocation);
     }
 
+    @Override
+    public Colocation removeAssignedUserFromColocation(Long colocationId, String userIdToRemove, String currentUserId, boolean isAdmin) {
+        Colocation colocation = colocationRepository.findById(colocationId)
+                .orElseThrow(() -> new RuntimeException("Colocation not found"));
+
+        // Autorisation : admin OU propriétaire
+        if (!isAdmin && !colocation.getIdOfPublisher().equals(currentUserId)) {
+            throw new SecurityException("You are not authorized to remove users from this colocation.");
+        }
+
+        // Suppression
+        colocation.removeAssignedUser(userIdToRemove);
+        return colocationRepository.save(colocation);
+    }
 
     @Override
     public Page<Colocation> getOwnColocations(String userId, String keyword, Pageable pageable) {
@@ -344,4 +359,25 @@ public class ColocationServiceImpl implements ColocationService {
         return colocationRepository.findByAssignedUserIdsContaining(userId, pageable)
                 .map(this::convertToDTO);
     }
+
+    @Override
+    public Colocation toggleUserAssignment(Long colocationId, String userId, String currentUserId, boolean isAdmin) {
+        Colocation colocation = colocationRepository.findById(colocationId)
+                .orElseThrow(() -> new RuntimeException("Colocation not found"));
+
+        // Autorisation : admin OU propriétaire
+        if (!isAdmin && !colocation.getIdOfPublisher().equals(currentUserId)) {
+            throw new SecurityException("You are not authorized to modify users of this colocation.");
+        }
+
+        // Toggle : assign if not present, unassign if already present
+        if (colocation.getAssignedUserIds().contains(userId)) {
+            colocation.removeAssignedUser(userId);
+        } else {
+            colocation.assignUser(userId);
+        }
+
+        return colocationRepository.save(colocation);
+    }
+
 }
