@@ -132,19 +132,6 @@ public class Colocation {
     private List<String> assignedUserIds = new ArrayList<>();
 
 
-    public boolean assignUser(String userId) {
-        if (assignedUserIds.contains(userId)) {
-            throw new IllegalArgumentException("User is already assigned to this colocation.");
-        }
-        if (assignedUserIds.size() >= maxRoommates) {
-            throw new IllegalStateException("Max number of roommates reached.");
-        }
-
-        assignedUserIds.add(userId);
-        this.currentRoommates = assignedUserIds.size();
-        return true;
-    }
-
     @PostLoad
     public void calculateAverageRating() {
         if (reviews != null && !reviews.isEmpty()) {
@@ -174,9 +161,22 @@ public class Colocation {
         }
     }
 
+    public boolean assignUser(String userId) {
+        if (assignedUserIds.contains(userId)) {
+            throw new IllegalArgumentException("User " + userId + " is already assigned to this colocation.");
+        }
+        if (assignedUserIds.size() >= maxRoommates) {
+            throw new IllegalStateException("Cannot assign more users. Maximum roommates limit reached.");
+        }
+
+        assignedUserIds.add(userId);
+        this.currentRoommates = assignedUserIds.size();
+        return true;
+    }
+
     public boolean removeAssignedUser(String userId) {
         if (!assignedUserIds.contains(userId)) {
-            throw new IllegalArgumentException("User is not assigned to this colocation.");
+            throw new IllegalArgumentException("User " + userId + " is not assigned to this colocation.");
         }
 
         assignedUserIds.remove(userId);
