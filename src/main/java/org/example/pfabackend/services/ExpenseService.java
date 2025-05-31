@@ -18,6 +18,6 @@ public interface ExpenseService {
     List<ExpenseWithStatsDTO> getExpensesWithStatsByUserEmail(String userEmail);
     List<UserColocationStatsDTO> getStatisticsByUserEmail(String userEmail);
 
-
+    List<Expense> getExpenses(Long colocationId, String userId);
 }
 

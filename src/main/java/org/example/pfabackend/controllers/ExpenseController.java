@@ -2,11 +2,15 @@ package org.example.pfabackend.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.example.pfabackend.dto.*;
+import org.example.pfabackend.entities.Expense;
 import org.example.pfabackend.services.ExpenseService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -73,6 +77,13 @@ public class ExpenseController {
     @GetMapping("/stats")
     public ResponseEntity<List<UserColocationStatsDTO>> getStats(@RequestParam String userEmail) {
         return ResponseEntity.ok(expenseService.getStatisticsByUserEmail(userEmail));
+    }
+
+    @GetMapping
+    public List<Expense> getExpenses(@RequestParam(required = false) Long colocationId,
+                                     @AuthenticationPrincipal Jwt jwt) {
+        String currentUserId = jwt.getClaimAsString("sub");
+        return expenseService.getExpenses(colocationId, currentUserId);
     }
 
 }

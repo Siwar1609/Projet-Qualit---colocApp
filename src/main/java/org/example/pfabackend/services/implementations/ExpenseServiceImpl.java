@@ -2,12 +2,14 @@ package org.example.pfabackend.services.implementations;
 
 import lombok.RequiredArgsConstructor;
 import org.example.pfabackend.dto.*;
+import org.example.pfabackend.entities.Colocation;
 import org.example.pfabackend.entities.Expense;
 import org.example.pfabackend.entities.ExpenseShare;
 import org.example.pfabackend.repositories.ColocationRepository;
 import org.example.pfabackend.repositories.ExpenseRepository;
 import org.example.pfabackend.services.ExpenseService;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -288,6 +290,23 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
 
         return statsList;
+    }
+
+    @Override
+    public List<Expense> getExpenses(Long colocationId, String userId) {
+        if (colocationId != null) {
+            return expenseRepository.findByColocationIdVisibleToUser(colocationId, userId);
+        } else {
+            // Combine les dépenses où l'utilisateur est publisher ou dans les shares
+            List<Expense> asPublisher = expenseRepository.findByPublisherId(userId);
+            List<Expense> asShare = expenseRepository.findByShareUserId(userId);
+
+            // Fusionner sans doublons
+            Set<Expense> resultSet = new HashSet<>(asPublisher);
+            resultSet.addAll(asShare);
+
+            return new ArrayList<>(resultSet);
+        }
     }
 
 
