@@ -21,18 +21,20 @@ import java.util.Map;
 public class ExpenseController {
 
     private final ExpenseService expenseService;
-    /*
+
         @GetMapping
         public List<Expense> getExpenses(@RequestParam(required = false) Long colocationId,
                                          @AuthenticationPrincipal Jwt jwt) {
             String currentUserId = jwt.getClaimAsString("sub");
             return expenseService.getExpenses(colocationId, currentUserId);
         }
-    */
+
+     /*
     @GetMapping
     public List<ExpenseDTO> getAllExpenses() {
         return expenseService.getAllExpenses();
     }
+    */
 
     @GetMapping("/own-expenses")
     public List<ExpenseDTO> getExpensesForCurrentUser(
