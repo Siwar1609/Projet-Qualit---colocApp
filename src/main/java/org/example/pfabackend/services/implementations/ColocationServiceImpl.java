@@ -1,6 +1,7 @@
 package org.example.pfabackend.services.implementations;
 
 import jakarta.validation.ValidationException;
+import lombok.RequiredArgsConstructor;
 import org.example.pfabackend.dto.CreateColocationDTO;
 import org.example.pfabackend.dto.ReviewDTO;
 import org.example.pfabackend.dto.UpdateColocationDTO;
@@ -14,8 +15,10 @@ import org.example.pfabackend.mappers.ReviewMapper;
 import org.example.pfabackend.repositories.ColocationRepository;
 import org.example.pfabackend.security.JwtConverter;
 import org.example.pfabackend.services.ColocationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,23 +28,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.example.pfabackend.security.SecurityConfig.ADMIN;
-
 @Service
 public class ColocationServiceImpl implements ColocationService {
     private final ColocationRepository colocationRepository;
     private final JwtConverter jwtConverter;
-
-    public ColocationServiceImpl(ColocationRepository colocationRepository, JwtConverter jwtConverter) {
+    private final UserService userService;
+    @Autowired
+    public ColocationServiceImpl(ColocationRepository colocationRepository, JwtConverter jwtConverter, UserService userService) {
         this.colocationRepository = colocationRepository;
         this.jwtConverter = jwtConverter;
+        this.userService = userService;
     }
-
     @Override
     public Page<ColocationDTO> getAllColocations(String search, int page, int size, Jwt jwt) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
@@ -65,11 +66,17 @@ public class ColocationServiceImpl implements ColocationService {
     @Override
     public Optional<ColocationDTO> getColocationById(Long id, Jwt jwt) {
         boolean isAdmin = jwt != null && jwtConverter.hasRole(jwt, ADMIN);
+        assert jwt != null;
+        String userId = jwt.getClaimAsString("sub");
+
         System.out.println("Gerrrrrr");
         System.out.println(isAdmin);
         Optional<Colocation> colocation = isAdmin
                 ? colocationRepository.findById(id)
-                : colocationRepository.findByIdAndIsPublishedTrueAndIsArchivedFalse(id);
+                : Optional.ofNullable(colocationRepository
+                .getByIdVisibleToUser(id, userId)
+                .orElseThrow(() -> new AccessDeniedException("Vous n'avez pas accès à cette colocation.")));
+
 
         return colocation.map(this::convertToDTO);
     }
@@ -375,8 +382,33 @@ public class ColocationServiceImpl implements ColocationService {
 
     @Override
     public Page<Colocation> getOwnColocations(String userId, String keyword, Pageable pageable) {
-        return colocationRepository.findOwnColocationsByKeyword(userId, keyword, pageable);
+        Page<Colocation> colocations = colocationRepository.findOwnColocationsByKeyword(userId, keyword, pageable);
+
+        // Récupérer tous les userIds assignés (évite les appels répétitifs)
+        List<String> allAssignedUserIds = colocations.stream()
+                .flatMap(coloc -> coloc.getAssignedUserIds().stream())
+                .distinct()
+                .toList();
+
+        // Appel à userService pour récupérer les infos des utilisateurs
+        List<Map<String, Object>> userInfos = userService.populateUsersById(allAssignedUserIds);
+
+        // Indexation rapide par ID
+        Map<String, Map<String, Object>> userInfoById = userInfos.stream()
+                .collect(Collectors.toMap(user -> (String) user.get("id"), user -> user));
+
+        // Injection des infos dans chaque colocation
+        colocations.forEach(coloc -> {
+            List<Map<String, Object>> infos = coloc.getAssignedUserIds().stream()
+                    .map(userInfoById::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+            coloc.setAssignedUserInfos(infos);
+        });
+
+        return colocations;
     }
+
 
 
 

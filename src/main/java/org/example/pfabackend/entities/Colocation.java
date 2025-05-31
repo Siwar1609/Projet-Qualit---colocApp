@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "colocation")
@@ -120,6 +121,8 @@ public class Colocation {
 
     @Transient
     private Double averageRating; // optional transient field for displaying average
+    @Transient
+    private List<Map<String, Object>> assignedUserInfos;
 
     //@ElementCollection
     //@CollectionTable(name = "colocation_images", joinColumns = @JoinColumn(name = "colocation_id"))

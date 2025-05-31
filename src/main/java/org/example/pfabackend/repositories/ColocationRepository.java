@@ -57,9 +57,11 @@ public interface ColocationRepository extends JpaRepository<Colocation, Long> {
             "LOWER(t) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
             "c.isPublished = false")
     Page<Colocation> searchNonPublished(@Param("keyword") String keyword, Pageable pageable);
-    @Query("SELECT c FROM Colocation c LEFT JOIN c.rules r LEFT JOIN c.tags t WHERE " +
-            "c.idOfPublisher = :idOfPublisher AND (" +
-            ":keyword IS NULL OR :keyword = '' OR " + // permet d’ignorer le filtre si keyword est null/vide
+    @Query("SELECT c FROM Colocation c " +
+            "LEFT JOIN c.rules r " +
+            "LEFT JOIN c.tags t " +
+            "WHERE (:idOfPublisher = c.idOfPublisher OR :idOfPublisher IN elements(c.assignedUserIds)) AND (" +
+            ":keyword IS NULL OR :keyword = '' OR " +
             "LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(c.nameOfPublisher) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
@@ -69,11 +71,20 @@ public interface ColocationRepository extends JpaRepository<Colocation, Long> {
             "LOWER(c.status) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(c.roommatesGenderPreference) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(r) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(t) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "LOWER(t) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+            ")")
     Page<Colocation> findOwnColocationsByKeyword(
             @Param("idOfPublisher") String idOfPublisher,
             @Param("keyword") String keyword,
             Pageable pageable);
+
+    @Query("SELECT c FROM Colocation c " +
+            "WHERE c.id = :id " +
+            "AND (:idOfUser = c.idOfPublisher OR :idOfUser IN elements(c.assignedUserIds))")
+    Optional<Colocation> getByIdVisibleToUser(
+            @Param("id") Long id,
+            @Param("idOfUser") String idOfUser);
+
 
     // Add these methods to your repository interface
     List<Colocation> findByAssignedUserIdsContaining(String userId);
