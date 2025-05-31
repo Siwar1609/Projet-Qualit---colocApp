@@ -45,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll() // handshake websocket non protégé
                         .requestMatchers("/api/chat/**").hasAnyRole(USER,COLOCATAIRE,ADMIN)
                         .requestMatchers("/api/expenses/**").hasAnyRole(USER,COLOCATAIRE,ADMIN)
+                        .requestMatchers("/api/shares/**").hasAnyRole(USER,COLOCATAIRE,ADMIN)
                         .requestMatchers("/api/notify/**").permitAll() // Allow fetching user info
 
                         // Role-based access control
