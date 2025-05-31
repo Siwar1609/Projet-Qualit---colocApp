@@ -39,6 +39,7 @@ public class Expense {
     private String paidByUserEmail;
 
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<ExpenseShare> shares = new ArrayList<>();
 
 

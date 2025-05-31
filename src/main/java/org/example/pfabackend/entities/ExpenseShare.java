@@ -1,5 +1,6 @@
 package org.example.pfabackend.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -19,7 +20,7 @@ public class ExpenseShare {
 
     @ManyToOne
     @JoinColumn(name = "expense_id")
-    @JsonIgnoreProperties("shares") // pour éviter boucle infinie
+    @JsonBackReference // pour éviter boucle infinie
     private Expense expense;
 
 
