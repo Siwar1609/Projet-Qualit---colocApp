@@ -1,5 +1,6 @@
 package org.example.pfabackend.controllers;
 
+import org.example.pfabackend.services.implementations.UserService;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
@@ -15,10 +16,11 @@ public class UserController {
 
     private final RestTemplate restTemplate;
 
-    public UserController(RestTemplate restTemplate) {
+    public UserController(RestTemplate restTemplate, UserService userService) {
         this.restTemplate = restTemplate;
+        this.userService = userService;
     }
-
+    private final UserService userService;
     /**
      * Endpoint to retrieve user information from Keycloak.
      */
@@ -339,6 +341,10 @@ public class UserController {
                     .body(e.getResponseBodyAsString());
         }
     }
-
+    @PostMapping("/populate")
+    public ResponseEntity<List<Map<String, Object>>> getUsersById(@RequestBody List<String> userIds) {
+        List<Map<String, Object>> users = userService.populateUsersById(userIds);
+        return ResponseEntity.ok(users);
+    }
 
 }
