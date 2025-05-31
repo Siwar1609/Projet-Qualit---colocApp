@@ -1,5 +1,6 @@
 package org.example.pfabackend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -36,5 +37,7 @@ public class Review {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "colocation_id")
+    @JsonIgnore
     private Colocation colocation;
+
 }
