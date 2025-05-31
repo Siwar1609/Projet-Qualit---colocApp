@@ -30,5 +30,6 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             "AND (e.colocation.idOfPublisher = :userId OR s.userId = :userId)")
     List<Expense> findByColocationIdVisibleToUser(@Param("colocationId") Long colocationId,
                                                   @Param("userId") String userId);
+    List<Expense> findByPaidByUserId(String paidByUserId);
 
 }

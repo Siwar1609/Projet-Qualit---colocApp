@@ -21,6 +21,27 @@ import java.util.Map;
 public class ExpenseController {
 
     private final ExpenseService expenseService;
+    /*
+        @GetMapping
+        public List<Expense> getExpenses(@RequestParam(required = false) Long colocationId,
+                                         @AuthenticationPrincipal Jwt jwt) {
+            String currentUserId = jwt.getClaimAsString("sub");
+            return expenseService.getExpenses(colocationId, currentUserId);
+        }
+    */
+    @GetMapping
+    public List<ExpenseDTO> getAllExpenses() {
+        return expenseService.getAllExpenses();
+    }
+
+    @GetMapping("/own-expenses")
+    public List<ExpenseDTO> getExpensesForCurrentUser(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "false") boolean share
+    ) {
+        System.out.println("Share param: " + share);
+        return expenseService.getExpensesForUser(jwt.getClaimAsString("sub"), share);
+    }
 
     @PostMapping
     public ResponseEntity<ExpenseDTO> createExpense(@RequestBody ExpenseDTO expenseDTO) {
@@ -79,11 +100,14 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseService.getStatisticsByUserEmail(userEmail));
     }
 
-    @GetMapping
-    public List<Expense> getExpenses(@RequestParam(required = false) Long colocationId,
-                                     @AuthenticationPrincipal Jwt jwt) {
-        String currentUserId = jwt.getClaimAsString("sub");
-        return expenseService.getExpenses(colocationId, currentUserId);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteExpense(@PathVariable Long id,
+                                              @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaimAsString("sub");
+        expenseService.deleteExpense(id, userId);
+        return ResponseEntity.noContent().build();
     }
+
+
 
 }

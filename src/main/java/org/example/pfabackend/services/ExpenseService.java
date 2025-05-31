@@ -19,5 +19,9 @@ public interface ExpenseService {
     List<UserColocationStatsDTO> getStatisticsByUserEmail(String userEmail);
 
     List<Expense> getExpenses(Long colocationId, String userId);
+
+    void deleteExpense(Long id, String userId);
+    List<ExpenseDTO> getAllExpenses();
+    List<ExpenseDTO> getExpensesForUser(String userId, boolean share);
 }
 

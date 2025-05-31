@@ -18,7 +18,11 @@ public class ExpenseDTO {
     private String paidByUserId;
     private String paidByUserEmail;
     private Long colocationId;
-    private List<ExpenseShareDTO> shares = new ArrayList<>();;
+    private List<ExpenseShareDTO> shares = new ArrayList<>();
     private LocalDate datePaid;
+
+    public Boolean getIsPaid() {
+        return datePaid != null;
+    }
 
 }

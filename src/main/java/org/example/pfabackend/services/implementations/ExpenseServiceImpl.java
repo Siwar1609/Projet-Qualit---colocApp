@@ -52,8 +52,9 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Override
     public List<ExpenseDTO> getExpensesForColocation(Long colocationId) {
         return expenseRepository.findByColocationId(colocationId)
-                .stream().map(expense -> mapper.map(expense, ExpenseDTO.class))
+                .stream().map(this::toDto)
                 .collect(Collectors.toList());
+
     }
 
     @Override
@@ -309,5 +310,93 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
     }
 
+    @Override
+    public void deleteExpense(Long id, String userId) {
+        Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Expense not found"));
+
+        // Seul l'utilisateur ayant payé ou le créateur du colocation peut supprimer
+        if (!expense.getPaidByUserId().equals(userId)) {
+            throw new RuntimeException("Not authorized to delete this expense");
+        }
+
+        expenseRepository.delete(expense);
+    }
+
+
+    private ExpenseDTO toDto(Expense expense) {
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setId(expense.getId());
+        dto.setLabel(expense.getLabel());
+        dto.setTotalAmount(expense.getTotalAmount());
+        dto.setDateLimit(expense.getDateLimit());
+        dto.setDatePaid(expense.getDatePaid());
+        dto.setPaidByUserId(expense.getPaidByUserId());
+        dto.setPaidByUserEmail(expense.getPaidByUserEmail());
+        dto.setColocationId(expense.getColocation().getId());
+
+        List<ExpenseShareDTO> shareDTOs = expense.getShares().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+        dto.setShares(shareDTOs);
+        return dto;
+    }
+
+    private ExpenseShareDTO toDto(ExpenseShare share) {
+        ExpenseShareDTO dto = new ExpenseShareDTO();
+        dto.setUserId(share.getUserId());
+        dto.setUserEmail(share.getUserEmail());
+        dto.setAmount(share.getAmount());
+        dto.setPaid(share.getPaid());
+        dto.setDatePaid(share.getDatePaid());
+        return dto;
+    }
+
+
+    public List<ExpenseDTO> getAllExpenses() {
+        return expenseRepository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    public List<ExpenseDTO> getExpensesForUser(String userId, boolean share) {
+        System.out.println("Fetching expenses for user: " + userId + " | share=" + share);
+
+        List<Expense> expenses = share
+                ? expenseRepository.findByShareUserId(userId)
+                : expenseRepository.findByPaidByUserId(userId);
+
+        System.out.println("Expenses found: " + expenses.size());
+        return expenses.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+
+
+
+
+    private ExpenseDTO mapToDTO(Expense expense) {
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setId(expense.getId());
+        dto.setLabel(expense.getLabel());
+        dto.setTotalAmount(expense.getTotalAmount());
+        dto.setDateLimit(expense.getDateLimit());
+        dto.setPaidByUserId(expense.getPaidByUserId());
+        dto.setPaidByUserEmail(expense.getPaidByUserEmail());
+        dto.setColocationId(expense.getColocation().getId());
+        dto.setDatePaid(expense.getDatePaid());
+
+        List<ExpenseShareDTO> shareDTOs = expense.getShares().stream().map(share -> {
+            ExpenseShareDTO s = new ExpenseShareDTO();
+            s.setUserId(share.getUserId());
+            s.setUserEmail(share.getUserEmail());
+            s.setAmount(share.getAmount());
+            s.setPaid(share.getPaid());
+            s.setDatePaid(share.getDatePaid());
+            return s;
+        }).collect(Collectors.toList());
+
+        dto.setShares(shareDTOs);
+        return dto;
+    }
 
 }

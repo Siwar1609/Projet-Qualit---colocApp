@@ -1,6 +1,7 @@
 package org.example.pfabackend.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,7 +39,6 @@ public class Expense {
     private String paidByUserEmail;
 
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonBackReference
     private List<ExpenseShare> shares = new ArrayList<>();
 
 
