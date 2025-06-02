@@ -1,5 +1,7 @@
 package org.example.pfabackend.services.implementations;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.example.pfabackend.dto.CreateColocationDTO;
@@ -37,11 +39,19 @@ public class ColocationServiceImpl implements ColocationService {
     private final ColocationRepository colocationRepository;
     private final JwtConverter jwtConverter;
     private final UserService userService;
+    private final Cloudinary cloudinary;
+
+
     @Autowired
-    public ColocationServiceImpl(ColocationRepository colocationRepository, JwtConverter jwtConverter, UserService userService) {
+    public ColocationServiceImpl(
+            ColocationRepository colocationRepository,
+            JwtConverter jwtConverter,
+            UserService userService,
+            Cloudinary cloudinary) {
         this.colocationRepository = colocationRepository;
         this.jwtConverter = jwtConverter;
         this.userService = userService;
+        this.cloudinary = cloudinary;
     }
     @Override
     public Page<ColocationDTO> getAllColocations(String search, int page, int size, Jwt jwt) {
@@ -468,14 +478,21 @@ public class ColocationServiceImpl implements ColocationService {
     public ColocationDTO saveColocationWithImages(CreateColocationDTO dto, List<MultipartFile> images, String publisherId, String publisherUsername) {
         Colocation colocation = convertToEntity(dto);
         colocation.setIdOfPublisher(publisherId);
-        colocation.setNameOfPublisher(publisherUsername); // Ajoute ce setter si nécessaire
+        colocation.setNameOfPublisher(publisherUsername);
 
         if (images != null && !images.isEmpty()) {
             for (MultipartFile image : images) {
-                String fileName = saveImageToLocal(image);
-                ColocationImage colocationImage = new ColocationImage();
-                colocationImage.setUrl("/uploads/images/colocations/" + fileName);
-                colocation.addImage(colocationImage);
+                try {
+                    Map uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
+                    String imageUrl = (String) uploadResult.get("secure_url");
+
+                    ColocationImage colocationImage = new ColocationImage();
+                    colocationImage.setUrl(imageUrl);
+                    colocation.addImage(colocationImage);
+
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image to Cloudinary", e);
+                }
             }
         }
 
@@ -508,18 +525,24 @@ public class ColocationServiceImpl implements ColocationService {
 
         if (newImages != null && !newImages.isEmpty()) {
             for (MultipartFile image : newImages) {
-                String fileName = saveImageToLocal(image);
-                ColocationImage imageEntity = new ColocationImage();
-                imageEntity.setUrl("/uploads/images/colocations/" + fileName);
-                imageEntity.setColocation(colocation);
-                colocation.addImage(imageEntity);
+                try {
+                    Map uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
+                    String imageUrl = (String) uploadResult.get("secure_url");
+
+                    ColocationImage imageEntity = new ColocationImage();
+                    imageEntity.setUrl(imageUrl);
+                    imageEntity.setColocation(colocation);
+                    colocation.addImage(imageEntity);
+
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image to Cloudinary", e);
+                }
             }
         }
 
         Colocation updated = colocationRepository.save(colocation);
         return convertToDTO(updated);
     }
-
 
 
     @Override
