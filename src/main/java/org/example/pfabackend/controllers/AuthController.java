@@ -1,3 +1,7 @@
+// ==============================
+// AuthController.java
+// ==============================
+
 package org.example.pfabackend.controllers;
 
 import org.springframework.http.*;
@@ -8,20 +12,25 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final RestTemplate restTemplate;
-    // clientId fixé en constante
+
     private static final String CLIENT_ID = "71919931-d9ee-4522-b316-f8152da7785b";
     private static final String REALM = "PFARealm";
-    // Map role name → full role JSON payload for Keycloak API
+    private static final String CLIENT_SECRET = "aq2uNxZCnVfyrz0gP4nxcWk1HWnOLog4";
+
+    //  Pattern pour valider l'UUID de userId pour éviter CWE-22 (Path Traversal)
+    private static final Pattern UUID_PATTERN =
+            Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
+
     static final Map<String, Map<String, Object>> ROLE_MAP = Map.of(
             "admin", Map.of(
                     "id", "c7623844-272a-4f27-b450-3ce013c1e7b2",
@@ -48,10 +57,18 @@ public class AuthController {
                     "containerId", CLIENT_ID
             )
     );
+
     public AuthController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
+    private boolean isValidUUID(String userId) {
+        return userId != null && UUID_PATTERN.matcher(userId).matches();
+    }
+
+    // ========================
+    // Login Keycloak
+    // ========================
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials) {
         String username = credentials.get("username");
@@ -62,14 +79,14 @@ public class AuthController {
         requestBody.add("client_id", "pfa-client-frontend");
         requestBody.add("username", username);
         requestBody.add("password", password);
-        requestBody.add("client_secret", "aq2uNxZCnVfyrz0gP4nxcWk1HWnOLog4");
+        requestBody.add("client_secret", CLIENT_SECRET);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        String keycloakTokenUrl = "http://localhost:8080/realms/PFARealm/protocol/openid-connect/token";
+        String keycloakTokenUrl = "http://localhost:8080/realms/" + REALM + "/protocol/openid-connect/token";
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(
@@ -78,16 +95,13 @@ public class AuthController {
                     requestEntity,
                     Map.class
             );
-
             return ResponseEntity.ok(response.getBody());
-
         } catch (HttpClientErrorException | HttpServerErrorException ex) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Authentication failed");
             errorResponse.put("message", ex.getResponseBodyAsString());
             errorResponse.put("status", ex.getStatusCode().value());
             return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);
-
         } catch (Exception ex) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Internal server error");
@@ -97,13 +111,14 @@ public class AuthController {
         }
     }
 
+    // ========================
+    // Récupérer les rôles du client
+    // ========================
     @GetMapping("/roles")
     public ResponseEntity<?> getClientRoles(@RequestHeader("Authorization") String authorizationHeader) {
-        String keycloakRolesUrl = "http://localhost:8080/admin/realms/PFARealm/clients/71919931-d9ee-4522-b316-f8152da7785b/roles";
-
+        String keycloakRolesUrl = "http://localhost:8080/admin/realms/" + REALM + "/clients/" + CLIENT_ID + "/roles";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", authorizationHeader);
-
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
         try {
@@ -113,25 +128,28 @@ public class AuthController {
                     requestEntity,
                     Map[].class
             );
-
             return ResponseEntity.ok(response.getBody());
-
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to fetch roles", "message", e.getMessage()));
         }
     }
 
-    // On ne passe plus clientId en paramètre, il est fixe
+    // ========================
+    // Assigner des rôles à un utilisateur
+    // Correction CWE-22 + validation des rôles
+    // ========================
     @PostMapping("/users/{userId}/roles")
     public ResponseEntity<?> assignRolesToUser(
             @PathVariable String userId,
             @RequestBody List<String> roles,
             @RequestHeader("Authorization") String authorizationHeader) {
 
-        // Construire la liste complète des rôles Keycloak à assigner
-        List<Map<String, Object>> rolesToAssign = new ArrayList<>();
+        if (!isValidUUID(userId)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid userId format"));
+        }
 
+        List<Map<String, Object>> rolesToAssign = new ArrayList<>();
         for (String roleName : roles) {
             Map<String, Object> roleData = ROLE_MAP.get(roleName.toLowerCase());
             if (roleData != null) {
@@ -147,17 +165,18 @@ public class AuthController {
                     .body(Map.of("error", "No valid roles provided"));
         }
 
-        String url = String.format(
-                "http://localhost:8080/admin/realms/PFARealm/users/%s/role-mappings/clients/%s",
-                userId, CLIENT_ID);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", authorizationHeader);
-
-        HttpEntity<List<Map<String, Object>>> requestEntity = new HttpEntity<>(rolesToAssign, headers);
-
         try {
+            String safeUserId = URLEncoder.encode(userId, StandardCharsets.UTF_8);
+            String url = String.format(
+                    "http://localhost:8080/admin/realms/%s/users/%s/role-mappings/clients/%s",
+                    REALM, safeUserId, CLIENT_ID);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", authorizationHeader);
+
+            HttpEntity<List<Map<String, Object>>> requestEntity = new HttpEntity<>(rolesToAssign, headers);
+
             ResponseEntity<Void> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
@@ -170,28 +189,36 @@ public class AuthController {
             } else {
                 return ResponseEntity.status(response.getStatusCode()).build();
             }
-
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to assign roles", "details", e.getMessage()));
         }
     }
 
+    // ========================
+    // Récupérer les rôles d'un utilisateur
+    // ✅ Correction CWE-22 + validation UUID
+    // ========================
     @GetMapping("/users/{userId}/roles")
     public ResponseEntity<?> getUserRoles(
             @PathVariable String userId,
             @RequestHeader("Authorization") String authorizationHeader) {
 
-        String url = String.format(
-                "http://localhost:8080/admin/realms/PFARealm/users/%s/role-mappings/clients/%s",
-                userId, CLIENT_ID);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", authorizationHeader);
-
-        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        if (!isValidUUID(userId)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid userId format"));
+        }
 
         try {
+            String safeUserId = URLEncoder.encode(userId, StandardCharsets.UTF_8);
+            String url = String.format(
+                    "http://localhost:8080/admin/realms/%s/users/%s/role-mappings/clients/%s",
+                    REALM, safeUserId, CLIENT_ID);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", authorizationHeader);
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
             ResponseEntity<List> response = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
@@ -200,11 +227,9 @@ public class AuthController {
             );
 
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
-
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to fetch roles", "details", e.getMessage()));
         }
     }
-
 }
