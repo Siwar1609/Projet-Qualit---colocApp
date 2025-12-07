@@ -23,14 +23,19 @@ public class AuthController {
 
     private final RestTemplate restTemplate;
 
-    private static final String CLIENT_ID = "71919931-d9ee-4522-b316-f8152da7785b";
-    private static final String REALM = "PFARealm";
-    private static final String CLIENT_SECRET = "aq2uNxZCnVfyrz0gP4nxcWk1HWnOLog4";
+    // ==============================
+    // Secrets et identifiants Keycloak
+    // Utiliser les variables d'environnement pour plus de sécurité
+    // ==============================
+    private static final String CLIENT_ID = System.getenv("KEYCLOAK_CLIENT_ID");
+    private static final String CLIENT_SECRET = System.getenv("KEYCLOAK_CLIENT_SECRET");
+    private static final String REALM = System.getenv("KEYCLOAK_REALM");
 
-    //  Pattern pour valider l'UUID de userId pour éviter CWE-22 (Path Traversal)
+    // Pattern pour valider l'UUID de userId (éviter CWE-22 / Path Traversal)
     private static final Pattern UUID_PATTERN =
             Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
 
+    // Définition des rôles autorisés côté serveur
     static final Map<String, Map<String, Object>> ROLE_MAP = Map.of(
             "admin", Map.of(
                     "id", "c7623844-272a-4f27-b450-3ce013c1e7b2",
@@ -60,6 +65,10 @@ public class AuthController {
 
     public AuthController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+
+        // Optionnel : ajouter un timeout pour éviter DoS
+        // ((SimpleClientHttpRequestFactory) restTemplate.getRequestFactory()).setConnectTimeout(5000);
+        // ((SimpleClientHttpRequestFactory) restTemplate.getRequestFactory()).setReadTimeout(5000);
     }
 
     private boolean isValidUUID(String userId) {
@@ -76,7 +85,7 @@ public class AuthController {
 
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
         requestBody.add("grant_type", "password");
-        requestBody.add("client_id", "pfa-client-frontend");
+        requestBody.add("client_id", CLIENT_ID); // depuis variable d'environnement
         requestBody.add("username", username);
         requestBody.add("password", password);
         requestBody.add("client_secret", CLIENT_SECRET);
@@ -85,7 +94,6 @@ public class AuthController {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
-
         String keycloakTokenUrl = "http://localhost:8080/realms/" + REALM + "/protocol/openid-connect/token";
 
         try {
