@@ -205,7 +205,7 @@ public class AuthController {
 
     // ========================
     // Récupérer les rôles d'un utilisateur
-    // ✅ Correction CWE-22 + validation UUID
+    // Correction CWE-22 + validation UUID
     // ========================
     @GetMapping("/users/{userId}/roles")
     public ResponseEntity<?> getUserRoles(
